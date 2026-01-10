@@ -7,10 +7,10 @@ export interface Blog {
     category: string;
     author_name: string;
     author_avatar: string;
-    thumbnail_url: string;
-    read_time: number;
-    tags: string[];
     published_at: string;
+    read_time: number;
+    thumbnail_url: string;
+    tags: string[];
     created_at: string;
     updated_at: string;
 }

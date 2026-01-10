@@ -31,7 +31,7 @@ export async function uploadThumbnail(file: File): Promise<string> {
 }
 
 // Create new blog
-export async function createBlog(blog: Omit<Blog, 'id' | 'created_at' | 'updated_at'>): Promise<Blog> {
+export async function createBlog(blog: any): Promise<Blog> {
     const supabase = createAdminClient();
 
     const { data, error } = await supabase
@@ -44,7 +44,7 @@ export async function createBlog(blog: Omit<Blog, 'id' | 'created_at' | 'updated
         throw new Error(`Failed to create blog: ${error.message}`);
     }
 
-    return data;
+    return data as Blog;
 }
 
 // Get all blogs
@@ -60,7 +60,7 @@ export async function getAllBlogs(): Promise<Blog[]> {
         throw new Error(`Failed to fetch blogs: ${error.message}`);
     }
 
-    return data || [];
+    return (data as Blog[]) || [];
 }
 
 // Get blog by slug
@@ -80,11 +80,11 @@ export async function getBlogBySlug(slug: string): Promise<Blog | null> {
         throw new Error(`Failed to fetch blog: ${error.message}`);
     }
 
-    return data;
+    return data as Blog;
 }
 
 // Update blog
-export async function updateBlog(id: string, updates: Partial<Omit<Blog, 'id' | 'created_at' | 'updated_at'>>): Promise<Blog> {
+export async function updateBlog(id: string, updates: any): Promise<Blog> {
     const supabase = createAdminClient();
 
     const { data, error } = await supabase
@@ -98,7 +98,7 @@ export async function updateBlog(id: string, updates: Partial<Omit<Blog, 'id' | 
         throw new Error(`Failed to update blog: ${error.message}`);
     }
 
-    return data;
+    return data as Blog;
 }
 
 // Delete blog
@@ -129,5 +129,5 @@ export async function getBlogsByCategory(category: string): Promise<Blog[]> {
         throw new Error(`Failed to fetch blogs: ${error.message}`);
     }
 
-    return data || [];
+    return (data as Blog[]) || [];
 }
