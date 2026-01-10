@@ -1,19 +1,41 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BlogHero } from "@/components/blog-hero";
 import { BlogFilters } from "@/components/blog-filters";
 import { BlogGrid } from "@/components/blog-grid";
 import { NewsletterSection } from "@/components/newsletter-section";
-import { blogPosts } from "@/lib/blog-data";
+import type { Blog } from "@/lib/supabase/types";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch blogs from Supabase
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
+
+  const fetchBlogs = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/blogs");
+      if (response.ok) {
+        const data = await response.json();
+        setBlogs(data.blogs || []);
+      }
+    } catch (error) {
+      console.error("Error fetching blogs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter blogs based on category and search query
   const filteredPosts = useMemo(() => {
-    return blogPosts.filter((post) => {
+    return blogs.filter((post) => {
       const matchesCategory =
         selectedCategory === "All" || post.category === selectedCategory;
       const matchesSearch =
@@ -25,25 +47,23 @@ export default function Home() {
         );
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [blogs, selectedCategory, searchQuery]);
 
   return (
     <main className="min-h-screen">
-      {/* Hero Section */}
       <BlogHero />
 
-      {/* Filters Section */}
-      <BlogFilters
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      <div id="blogs" className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-24 space-y-12">
+        <BlogFilters
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
 
-      {/* Blog Grid */}
-      <BlogGrid posts={filteredPosts} />
+        <BlogGrid posts={filteredPosts} loading={loading} />
+      </div>
 
-      {/* Newsletter Section */}
       <NewsletterSection />
 
       {/* Footer */}
@@ -63,18 +83,6 @@ export default function Home() {
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Visit BandhanNova.in
-              </a>
-              <a
-                href="#"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Privacy Policy
-              </a>
-              <a
-                href="#"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Terms of Service
               </a>
             </div>
           </div>
