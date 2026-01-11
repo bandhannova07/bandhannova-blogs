@@ -119,7 +119,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                         <Badge className="bg-primary text-primary-foreground">
                             {post.category}
                         </Badge>
-                        <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight">
+                        <h1 className="text-3xl md:text-5xl font-bold leading-tight" style={{ color: '#fbfcf8' }}>
                             {post.title}
                         </h1>
                     </div>

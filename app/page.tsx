@@ -10,6 +10,7 @@ import type { Blog } from "@/lib/supabase/types";
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,9 +34,9 @@ export default function Home() {
     }
   };
 
-  // Filter blogs based on category and search query
+  // Filter and sort blogs
   const filteredPosts = useMemo(() => {
-    return blogs.filter((post) => {
+    let filtered = blogs.filter((post) => {
       const matchesCategory =
         selectedCategory === "All" || post.category === selectedCategory;
       const matchesSearch =
@@ -47,7 +48,19 @@ export default function Home() {
         );
       return matchesCategory && matchesSearch;
     });
-  }, [blogs, selectedCategory, searchQuery]);
+
+    // Sort blogs
+    if (sortBy === "popular") {
+      filtered.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+    } else {
+      // Default: newest first
+      filtered.sort((a, b) =>
+        new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+      );
+    }
+
+    return filtered;
+  }, [blogs, selectedCategory, searchQuery, sortBy]);
 
   return (
     <main className="min-h-screen">
@@ -59,6 +72,8 @@ export default function Home() {
           onCategoryChange={setSelectedCategory}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
         />
 
         <BlogGrid posts={filteredPosts} loading={loading} />

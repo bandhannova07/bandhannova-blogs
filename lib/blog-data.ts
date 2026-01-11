@@ -1,10 +1,11 @@
 // Blog categories
 export const categories = [
     "All",
-    "Career Guide",
-    "Study Guide",
     "AI & Technology",
-    "Skills Development",
+    "Learning & Education",
+    "Digital Skill Development",
+    "Blogging & Content",
+    "Tools & Resources",
 ] as const;
 
 export type Category = typeof categories[number];

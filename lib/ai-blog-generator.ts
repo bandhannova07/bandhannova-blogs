@@ -11,7 +11,7 @@ Category: ${category}
 IMPORTANT REQUIREMENTS:
 - Write for students (avoid specific class/board references like "Class 10", "CBSE", etc.)
 - Use generic terms like "students", "learners", "young minds"
-- Word count: 1200-1500 words
+- Word count: 1300-1500 words
 - Use emojis naturally throughout the content (🚀 💡 ✨ 🎯 📚 etc.)
 - Write in a friendly, mentor-like tone
 - Include practical examples relevant to Indian students

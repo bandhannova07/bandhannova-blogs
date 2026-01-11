@@ -13,6 +13,7 @@ export interface Blog {
     tags: string[];
     created_at: string;
     updated_at: string;
+    view_count?: number; // Optional until migration runs
 }
 
 export interface Database {

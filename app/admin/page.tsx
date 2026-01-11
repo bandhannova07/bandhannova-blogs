@@ -457,13 +457,10 @@ export default function AdminPage() {
                                         <p className="text-sm">Generate and publish your first blog!</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         {publishedBlogs.map((blog) => (
-                                            <div
-                                                key={blog.id}
-                                                className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                                            >
-                                                <div className="relative h-20 w-32 rounded overflow-hidden flex-shrink-0">
+                                            <div key={blog.id} className="flex gap-2 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                                <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden flex-shrink-0">
                                                     <Image
                                                         src={blog.thumbnail_url}
                                                         alt={blog.title}
@@ -472,19 +469,20 @@ export default function AdminPage() {
                                                     />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="font-semibold text-lg truncate">{blog.title}</h3>
-                                                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                                                        <Badge variant="outline">{blog.category}</Badge>
-                                                        <span>{blog.read_time} min read</span>
-                                                        <span>{new Date(blog.published_at).toLocaleDateString()}</span>
+                                                    <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">{blog.title}</h3>
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                                        <Badge variant="outline" className="text-xs">{blog.category}</Badge>
+                                                        <span className="hidden sm:inline">{blog.read_time} min</span>
+                                                        <span className="text-xs">{new Date(blog.published_at).toLocaleDateString()}</span>
                                                     </div>
                                                 </div>
                                                 <Button
                                                     variant="destructive"
                                                     size="icon"
                                                     onClick={() => handleDeleteBlog(blog.id, blog.title)}
+                                                    className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 bg-red-600 hover:bg-red-700 text-white"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                                 </Button>
                                             </div>
                                         ))}

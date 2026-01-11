@@ -77,7 +77,7 @@ export default function LoginPage() {
               </label>
               <Input
                 type="email"
-                placeholder="arthur.b@blinders.org"
+                placeholder="Enter Admin email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
