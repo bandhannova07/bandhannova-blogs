@@ -16,6 +16,21 @@
   --radius-lg: 1rem;
 }
 
+/* Gradient Variables */
+:root {
+  --gradient-hero: linear-gradient(135deg, #C683D7 0%, #223CCF 50%, #00D9FF 100%);
+  --foreground: hsl(0 0% 5%);
+  --foreground-secondary: hsl(0 0% 40%);
+  --background: hsl(0 0% 100%);
+}
+
+.dark {
+  --foreground: hsl(0 0% 98%);
+  --foreground-secondary: hsl(0 0% 70%);
+  --background: hsl(0 0% 5%);
+}
+
+
 /* Light Mode - Better Text Contrast */
 :root {
   --foreground: 0 0% 5%;

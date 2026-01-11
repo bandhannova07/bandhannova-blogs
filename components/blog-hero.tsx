@@ -68,7 +68,7 @@ export function BlogHero() {
                                 e.preventDefault();
                                 document.getElementById('blogs')?.scrollIntoView({ behavior: 'smooth' });
                             }}
-                            className="inline-flex items-center justify-center rounded-lg bg-primary px-8 py-4 text-lg font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl hover:scale-105"
+                            className="inline-flex h-12 items-center justify-center rounded-lg bg-primary px-8 py-4 text-lg font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl hover:scale-105"
                         >
                             Explore Blogs
                         </a>
@@ -76,7 +76,7 @@ export function BlogHero() {
                             href="https://www.bandhannova.in"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center rounded-lg border-2 border-primary px-8 py-4 text-lg font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:scale-105"
+                            className="inline-flex h-12 items-center justify-center rounded-lg border-2 border-primary px-8 py-4 text-lg font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:scale-105"
                         >
                             Visit BandhanNova.in
                         </a>

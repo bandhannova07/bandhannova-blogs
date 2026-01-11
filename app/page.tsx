@@ -1,10 +1,10 @@
 "use client";
 
+import { Analytics } from "@vercel/analytics/next"
 import { useState, useMemo, useEffect } from "react";
 import { BlogHero } from "@/components/blog-hero";
 import { BlogFilters } from "@/components/blog-filters";
 import { BlogGrid } from "@/components/blog-grid";
-import { NewsletterSection } from "@/components/newsletter-section";
 import type { Blog } from "@/lib/supabase/types";
 
 export default function Home() {
@@ -63,8 +63,6 @@ export default function Home() {
 
         <BlogGrid posts={filteredPosts} loading={loading} />
       </div>
-
-      <NewsletterSection />
 
       {/* Footer */}
       <footer className="border-t py-12 px-4 md:px-6 lg:px-8 bg-muted/30">
