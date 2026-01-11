@@ -176,17 +176,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     <div>
                         <div
                             className="prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-none dark:prose-invert
-              prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground
+              prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground dark:prose-headings:text-white
               prose-h1:text-3xl sm:prose-h1:text-4xl md:prose-h1:text-5xl prose-h1:mb-6 sm:prose-h1:mb-8 prose-h1:leading-tight
               prose-h2:text-2xl sm:prose-h2:text-3xl md:prose-h2:text-4xl prose-h2:mt-10 sm:prose-h2:mt-12 md:prose-h2:mt-16 prose-h2:mb-4 sm:prose-h2:mb-6 prose-h2:leading-tight
               prose-h3:text-xl sm:prose-h3:text-2xl md:prose-h3:text-3xl prose-h3:mt-8 sm:prose-h3:mt-10 md:prose-h3:mt-12 prose-h3:mb-3 sm:prose-h3:mb-4
-              prose-p:text-base sm:prose-p:text-lg md:prose-p:text-xl prose-p:leading-relaxed prose-p:mb-4 sm:prose-p:mb-6 md:prose-p:mb-8 prose-p:text-foreground/90
+              prose-p:text-base sm:prose-p:text-lg md:prose-p:text-xl prose-p:leading-relaxed prose-p:mb-4 sm:prose-p:mb-6 md:prose-p:mb-8 prose-p:text-foreground/90 dark:prose-p:text-gray-200
               prose-ul:my-4 sm:prose-ul:my-6 md:prose-ul:my-8 prose-ul:space-y-2 sm:prose-ul:space-y-3
-              prose-li:text-base sm:prose-li:text-lg md:prose-li:text-xl prose-li:leading-relaxed prose-li:text-foreground/90
-              prose-strong:text-primary prose-strong:font-bold
-              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+              prose-li:text-base sm:prose-li:text-lg md:prose-li:text-xl prose-li:leading-relaxed prose-li:text-foreground/90 dark:prose-li:text-gray-200
+              prose-strong:text-primary prose-strong:font-bold dark:prose-strong:text-primary
+              prose-a:text-primary prose-a:no-underline hover:prose-a:underline dark:prose-a:text-primary
               prose-img:rounded-lg prose-img:shadow-lg
-              prose-code:text-sm sm:prose-code:text-base
+              prose-code:text-sm sm:prose-code:text-base dark:prose-code:text-gray-300
               px-2 sm:px-4"
                             dangerouslySetInnerHTML={{ __html: contentWithAds }}
                         />

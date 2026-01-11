@@ -1,20 +1,29 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface InContentAdProps {
     className?: string;
 }
 
 export function InContentAd({ className = "" }: InContentAdProps) {
+    const adLoaded = useRef(false);
+
     useEffect(() => {
-        try {
-            if (typeof window !== 'undefined') {
-                ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+        if (adLoaded.current) return;
+
+        const timer = setTimeout(() => {
+            try {
+                if (typeof window !== 'undefined') {
+                    ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+                    adLoaded.current = true;
+                }
+            } catch (error) {
+                // Silently handle AdSense errors
             }
-        } catch (error) {
-            console.error('AdSense error:', error);
-        }
+        }, 100);
+
+        return () => clearTimeout(timer);
     }, []);
 
     return (
