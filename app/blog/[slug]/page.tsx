@@ -6,6 +6,7 @@ import { Calendar, Clock, User, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getBlogBySlug, getBlogsByCategory } from "@/lib/blog-service";
 import type { Blog } from "@/lib/supabase/types";
 
 interface BlogPostPageProps {
@@ -15,36 +16,31 @@ interface BlogPostPageProps {
 }
 
 // Fetch blog from API
-async function getBlogBySlug(slug: string): Promise<Blog | null> {
-    try {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const response = await fetch(`${baseUrl}/api/blogs`, {
-            cache: 'no-store'
-        });
+// async function getBlogBySlug(slug: string): Promise<Blog | null> {
+//     try {
+//         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+//         const response = await fetch(`${baseUrl}/api/blogs`, {
+//             cache: 'no-store'
+//         });
 
-        if (!response.ok) return null;
+//         if (!response.ok) return null;
 
-        const data = await response.json();
-        const blog = data.blogs?.find((b: Blog) => b.slug === slug);
-        return blog || null;
-    } catch (error) {
-        console.error('Error fetching blog:', error);
-        return null;
-    }
-}
+//         const data = await response.json();
+//         const blog = data.blogs?.find((b: Blog) => b.slug === slug);
+//         return blog || null;
+//     } catch (error) {
+//         console.error('Error fetching blog:', error);
+//         return null;
+//     }
+// }
 
 // Fetch related blogs
 async function getRelatedBlogs(category: string, currentSlug: string): Promise<Blog[]> {
     try {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const response = await fetch(`${baseUrl}/api/blogs`, {
-            cache: 'no-store'
-        });
-
-        if (!response.ok) return [];
-
-        const data = await response.json();
-        return data.blogs?.filter((b: Blog) => b.category === category && b.slug !== currentSlug).slice(0, 3) || [];
+        const blogs = await getBlogsByCategory(category);
+        return blogs
+            .filter(blog => blog.slug !== currentSlug)
+            .slice(0, 3);
     } catch (error) {
         console.error('Error fetching related blogs:', error);
         return [];
