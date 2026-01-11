@@ -1,104 +1,135 @@
-import OpenAI from 'openai';
+export async function generateBlogWithAI(topic: string, category: string) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    const model = process.env.OPENROUTER_MODEL || "xiaomi/mimo-v2-flash:free";
 
-const openai = new OpenAI({
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-});
+    const prompt = `You are a professional blog writer for BandhanNova AI Hub, an AI platform for students.
 
-interface BlogMetadata {
-    title: string;
-    slug: string;
-    excerpt: string;
-    tags: string[];
-    readTime: number;
+Write a comprehensive, SEO-optimized blog post about: "${topic}"
+
+Category: ${category}
+
+IMPORTANT REQUIREMENTS:
+- Write for students (avoid specific class/board references like "Class 10", "CBSE", etc.)
+- Use generic terms like "students", "learners", "young minds"
+- Word count: 1200-1500 words
+- Use emojis naturally throughout the content (🚀 💡 ✨ 🎯 📚 etc.)
+- Write in a friendly, mentor-like tone
+- Include practical examples relevant to Indian students
+- NO fake statistics or copied content
+- AdSense safe content
+- Include a soft CTA mentioning BandhanNova AI naturally
+
+STRUCTURE:
+# [SEO-Friendly Title with Emoji]
+
+## Introduction (120-150 words)
+[Engaging introduction that hooks the reader]
+
+## [Main Section 1]
+[Detailed content with H3 subheadings, bullet points, examples]
+
+### [Subsection]
+[Content with practical tips]
+
+## [Main Section 2]
+[More detailed content]
+
+## [Main Section 3]
+[Continue with valuable information]
+
+## Key Takeaways
+- [Bullet point 1]
+- [Bullet point 2]
+- [Bullet point 3]
+
+## [Soft CTA Section]
+[Natural mention of how BandhanNova AI can help]
+
+Write the complete blog post in markdown format now:`;
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://blogs.bandhannova.in",
+                "X-Title": "BandhanNova AI Hub Blog Generator",
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt,
+                    },
+                ],
+                temperature: 0.7,
+                max_tokens: 4000,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenRouter API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0]?.message?.content;
+
+        if (!content) {
+            throw new Error("No content generated");
+        }
+
+        return content;
+    } catch (error) {
+        console.error("Error generating blog:", error);
+        throw error;
+    }
 }
 
-interface GeneratedBlog {
-    metadata: BlogMetadata;
-    content: string;
-}
+export async function generateBlogMetadata(content: string) {
+    // Extract title from markdown
+    const titleMatch = content.match(/^#\s+(.+)$/m);
+    const title = titleMatch ? titleMatch[1].replace(/[#*_`]/g, '').trim() : "Untitled Blog Post";
 
-// Generate unique slug with timestamp
-function generateUniqueSlug(title: string): string {
+    // Generate excerpt (first paragraph after title)
+    const lines = content.split('\n').filter(line => line.trim());
+    const firstParagraph = lines.find(line =>
+        !line.startsWith('#') &&
+        !line.startsWith('##') &&
+        line.length > 50
+    );
+    const excerpt = firstParagraph
+        ? firstParagraph.substring(0, 200) + "..."
+        : "Explore insights from BandhanNova AI Hub";
+
+    // Generate unique slug with timestamp
     const baseSlug = title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 
-    // Add timestamp to ensure uniqueness
     const timestamp = Date.now();
-    return `${baseSlug}-${timestamp}`;
-}
+    const slug = `${baseSlug}-${timestamp}`;
 
-export async function generateBlogPost(topic: string, category: string): Promise<GeneratedBlog> {
-    const systemPrompt = `You are an expert content writer for BandhanNova AI Hub, a platform dedicated to helping Indian students with career guidance, study tips, AI technology, and skill development.
+    // Extract tags (look for keywords in title and content)
+    const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for'];
+    const words = title.toLowerCase().split(/\s+/).filter(w =>
+        w.length > 3 && !commonWords.includes(w)
+    );
+    const tags = words.slice(0, 4).map(w =>
+        w.charAt(0).toUpperCase() + w.slice(1)
+    );
 
-Your writing style:
-- Clear, practical, and student-friendly
-- Uses simple language that Indian students can easily understand
-- Includes real-world examples and actionable advice
-- Optimistic and encouraging tone
-- Focuses on practical implementation
+    // Estimate read time (average 200 words per minute)
+    const wordCount = content.split(/\s+/).length;
+    const readTime = Math.ceil(wordCount / 200);
 
-Target audience: Indian students (ages 16-25) looking for guidance on careers, studies, technology, and skills.`;
-
-    const userPrompt = `Write a comprehensive blog post about "${topic}" in the "${category}" category.
-
-Requirements:
-1. Title: Catchy and SEO-friendly (50-60 characters)
-2. Content: 1500-2000 words in Markdown format
-3. Structure:
-   - Engaging introduction
-   - 4-6 main sections with clear headings
-   - Practical examples and tips
-   - Conclusion with actionable takeaways
-4. Excerpt: Compelling 150-character summary
-5. Tags: 5-7 relevant tags
-6. Estimated read time in minutes
-
-Format your response as JSON:
-{
-  "title": "Blog title here",
-  "excerpt": "Brief summary here",
-  "content": "Full markdown content here",
-  "tags": ["tag1", "tag2", "tag3"],
-  "readTime": 8
-}`;
-
-    try {
-        const completion = await openai.chat.completions.create({
-            model: process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.7,
-            max_tokens: 4000,
-        });
-
-        const response = completion.choices[0]?.message?.content;
-        if (!response) {
-            throw new Error('No response from AI');
-        }
-
-        const parsed = JSON.parse(response);
-
-        // Generate unique slug with timestamp
-        const slug = generateUniqueSlug(parsed.title);
-
-        return {
-            metadata: {
-                title: parsed.title,
-                slug: slug,
-                excerpt: parsed.excerpt,
-                tags: parsed.tags || [],
-                readTime: parsed.readTime || 5,
-            },
-            content: parsed.content,
-        };
-    } catch (error) {
-        console.error('Error generating blog:', error);
-        throw new Error('Failed to generate blog post');
-    }
+    return {
+        title,
+        slug,
+        excerpt,
+        tags,
+        readTime,
+    };
 }
