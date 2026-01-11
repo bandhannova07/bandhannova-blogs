@@ -3,7 +3,6 @@
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { categories } from "@/lib/blog-data";
 
 interface BlogFiltersProps {
@@ -38,26 +37,27 @@ export function BlogFilters({
                     />
                 </div>
 
-                {/* Sort Dropdown - Better Labels */}
-                <Select value={sortBy} onValueChange={onSortChange}>
-                    <SelectTrigger className="w-full sm:w-[220px] text-base h-11">
-                        <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="newest">
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">🆕</span>
-                                <span>Latest Posts</span>
-                            </div>
-                        </SelectItem>
-                        <SelectItem value="popular">
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">🔥</span>
-                                <span>Most Popular</span>
-                            </div>
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
+                {/* Custom Sort Toggle */}
+                <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-full sm:w-auto">
+                    <button
+                        onClick={() => onSortChange("newest")}
+                        className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all ${sortBy === "newest"
+                                ? "bg-background shadow-sm text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                    >
+                        Discover
+                    </button>
+                    <button
+                        onClick={() => onSortChange("popular")}
+                        className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all ${sortBy === "popular"
+                                ? "bg-background shadow-sm text-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                    >
+                        Popular
+                    </button>
+                </div>
             </div>
 
             {/* Category Filters - Centered */}

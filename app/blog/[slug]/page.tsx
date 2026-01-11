@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { markdownToHtml } from "@/lib/markdown-utils";
+import { injectAdsIntoContent } from "@/lib/ad-injector";
 import { Calendar, Clock, User, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { InContentAd } from "@/components/in-content-ad";
 import { getBlogBySlug, getBlogsByCategory } from "@/lib/blog-service";
 import type { Blog } from "@/lib/supabase/types";
 
@@ -85,8 +87,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     // Get related posts
     const relatedPosts = await getRelatedBlogs(post.category, post.slug);
 
-    // Convert markdown to HTML
+    // Convert markdown to HTML and inject ads
     const contentHtml = markdownToHtml(post.content);
+    const contentWithAds = injectAdsIntoContent(contentHtml);
 
     return (
         <main className="min-h-screen">
@@ -169,9 +172,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                         ))}
                     </div>
 
-                    {/* Blog Content */}
-                    <div
-                        className="prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-none dark:prose-invert
+                    {/* Blog Content with Ads */}
+                    <div>
+                        <div
+                            className="prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-none dark:prose-invert
               prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground
               prose-h1:text-3xl sm:prose-h1:text-4xl md:prose-h1:text-5xl prose-h1:mb-6 sm:prose-h1:mb-8 prose-h1:leading-tight
               prose-h2:text-2xl sm:prose-h2:text-3xl md:prose-h2:text-4xl prose-h2:mt-10 sm:prose-h2:mt-12 md:prose-h2:mt-16 prose-h2:mb-4 sm:prose-h2:mb-6 prose-h2:leading-tight
@@ -184,8 +188,21 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               prose-img:rounded-lg prose-img:shadow-lg
               prose-code:text-sm sm:prose-code:text-base
               px-2 sm:px-4"
-                        dangerouslySetInnerHTML={{ __html: contentHtml }}
-                    />
+                            dangerouslySetInnerHTML={{ __html: contentWithAds }}
+                        />
+                        {/* Render ads at markers */}
+                        <script
+                            dangerouslySetInnerHTML={{
+                                __html: `
+                                    document.querySelectorAll('.in-content-ad-marker').forEach((marker, index) => {
+                                        const adContainer = document.createElement('div');
+                                        adContainer.className = 'in-content-ad-container';
+                                        marker.parentNode.replaceChild(adContainer, marker);
+                                    });
+                                `
+                            }}
+                        />
+                    </div>
                 </div>
             </article>
 
