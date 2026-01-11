@@ -126,7 +126,7 @@ body {
   background: linear-gradient(135deg, rgba(32, 149, 243, 0.1) 0%, rgba(62, 80, 180, 0.1) 100%);
 }
 
-/* Better Text Contrast for Light Mode */
+/* Light Mode Text Improvements */
 .light {
   color: hsl(0 0% 5%);
 }
@@ -139,7 +139,7 @@ body {
   color: hsl(0 0% 5%) !important;
 }
 
-/* Ensure all text is readable */
+/* Ensure all text elements are dark in light mode */
 .light p,
 .light h1,
 .light h2,
@@ -147,10 +147,36 @@ body {
 .light h4,
 .light h5,
 .light h6,
-.light span {
+.light span,
+.light li,
+.light ul,
+.light ol,
+.light div {
   color: hsl(0 0% 10%);
 }
 
-.light .text-muted-foreground {
-  color: hsl(0 0% 35%);
+/* Prose content styling for light mode */
+.light .prose {
+  color: hsl(0 0% 10%);
+}
+
+.light .prose p,
+.light .prose li,
+.light .prose ul,
+.light .prose ol,
+.light .prose h1,
+.light .prose h2,
+.light .prose h3,
+.light .prose h4,
+.light .prose h5,
+.light .prose h6,
+.light .prose strong,
+.light .prose em,
+.light .prose code {
+  color: hsl(0 0% 10%) !important;
+}
+
+.light .prose ul li::marker,
+.light .prose ol li::marker {
+  color: hsl(0 0% 10%) !important;
 }
