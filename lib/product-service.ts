@@ -18,7 +18,7 @@ export interface Product {
 export async function getAllProducts(): Promise<Product[]> {
     try {
         const results = await executeQuery('SELECT * FROM products ORDER BY created_at DESC');
-        return results as Product[];
+        return results as any as Product[];
     } catch (error) {
         console.error('Failed to fetch products:', error);
         return [];
@@ -52,7 +52,7 @@ export async function upsertProduct(product: Partial<Product>): Promise<Product>
     }
     
     const results = await executeQuery('SELECT * FROM products WHERE id = ?', [id]);
-    return results[0] as Product;
+    return (results[0] as any) as Product;
 }
 
 // Delete product
