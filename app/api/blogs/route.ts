@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
             thumbnail_url: body.thumbnail_url,
             read_time: body.read_time,
             tags: body.tags,
+            sources: body.sources,
+            affiliate_links: body.affiliate_links,
+            brand_ads: body.brand_ads,
+            section_layouts: body.section_layouts,
             published_at: body.published_at,
         });
 

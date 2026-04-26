@@ -5,7 +5,11 @@ import { useState, useMemo, useEffect } from "react";
 import { BlogHero } from "@/components/blog-hero";
 import { BlogFilters } from "@/components/blog-filters";
 import { BlogGrid } from "@/components/blog-grid";
-import type { Blog } from "@/lib/supabase/types";
+import { BlogCard } from "@/components/blog-card";
+import { Badge } from "@/components/ui/badge";
+import type { Blog } from "@/lib/blog-service";
+import { Github, Twitter, Linkedin, ExternalLink, Globe, ArrowUpRight } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -14,7 +18,7 @@ export default function Home() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch blogs from Supabase
+  // Fetch blogs from API
   useEffect(() => {
     fetchBlogs();
   }, []);
@@ -66,44 +70,29 @@ export default function Home() {
   }, [blogs, selectedCategory, searchQuery, sortBy]);
 
   return (
-    <main className="min-h-screen">
-      <BlogHero />
+    <main className="min-h-screen bg-mesh relative overflow-x-hidden">
+      <Analytics />
 
-      <div id="blogs" className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-24 space-y-12">
-        <BlogFilters
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-        />
+      <div className="relative z-10">
+        <BlogHero />
 
-        <BlogGrid posts={filteredPosts} loading={loading} />
-      </div>
+        <div id="blogs" className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-10 md:py-20 space-y-10 md:space-y-16">
+          <BlogFilters
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+          />
 
-      {/* Footer */}
-      <footer className="border-t py-12 px-4 md:px-6 lg:px-8 bg-muted/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="text-center md:text-left">
-              <p className="text-sm text-muted-foreground">
-                © 2026 BandhanNova AI Hub. All rights reserved.
-              </p>
-            </div>
-            <div className="flex items-center gap-6">
-              <a
-                href="https://www.bandhannova.in"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Visit BandhanNova.in
-              </a>
-            </div>
-          </div>
+          <BlogGrid posts={filteredPosts} loading={loading} />
         </div>
-      </footer>
+
+        {/* Premium Footer */}
+        <Footer />
+      </div>
     </main>
   );
 }
+

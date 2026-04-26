@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         {
             url: 'https://blogs.bandhannova.in',
             lastModified: new Date(),
-            changeFrequency: 'daily' as const,
+            changeFrequency: 'daily',
             priority: 1,
         },
         ...blogUrls,

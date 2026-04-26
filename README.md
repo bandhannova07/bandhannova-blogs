@@ -165,6 +165,6 @@ This is a private project for BandhanNova AI Hub.
 
 ---
 
-**Built with ❤️ by BandhanNova AI Hub**
+**Built with ❤️ by BandhanNova Platforms**
 
-Visit us at [bandhannova.in](https://www.bandhannova.in)
+Visit us at [www.bandhannova.in](https://www.bandhannova.in)

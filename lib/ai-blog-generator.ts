@@ -1,12 +1,21 @@
-export async function generateBlogWithAI(topic: string, category: string) {
+export async function generateBlogWithAI(topic: string, currentCategory: string, categories: string[], sources?: { url: string; content: string }[]) {
     const apiKey = process.env.OPENROUTER_API_KEY;
-    const model = process.env.OPENROUTER_MODEL || "xiaomi/mimo-v2-flash:free";
+    const model = process.env.OPENROUTER_MODEL || "liquid/lfm-2.5-1.2b-instruct:free";
+
+    let sourcesContext = "";
+    if (sources && sources.length > 0) {
+        sourcesContext = "\n\nCRITICAL REFERENCE SOURCES:\n";
+        sources.forEach((source, index) => {
+            sourcesContext += `\n--- SOURCE ${index + 1} --- \nURL: ${source.url}\nCONTENT: ${source.content}\n--------------------\n`;
+        });
+        sourcesContext += "\nSTRICT INSTRUCTIONS: Use the information from these sources to write a high-level, unique blog. Synthesize the data, don't just copy. Ensure all technical terms are explained correctly.\n";
+    }
 
     const prompt = `You are a professional blog writer for BandhanNova AI Hub, an AI platform for students.
 
 Write a comprehensive, SEO-optimized blog post about: "${topic}"
 
-Category: ${category}
+Category: ${currentCategory}${sourcesContext}
 
 IMPORTANT REQUIREMENTS:
 - Write for students (avoid specific class/board references like "Class 10", "CBSE", etc.)
@@ -19,34 +28,33 @@ IMPORTANT REQUIREMENTS:
 - AdSense safe content
 - Include a soft CTA mentioning BandhanNova AI naturally
 
-STRUCTURE:
-# [SEO-Friendly Title with Emoji]
+STRUCTURE & STYLE REFERENCE (Follow this "High-Level" standard):
+1. Use # [Title with Emoji] for the main heading.
+2. Use ## for major sections and ### for sub-sections.
+3. Use GitHub-style callouts for key information (NOTE, TIP, IMPORTANT, etc.).
+4. Include at least one complex code block if relevant, with comments in Bengali.
+5. Use --- (horizontal rules) between major sections.
+6. IMAGE STRATEGY: 
+   - Identify 2-3 locations where a high-quality image or technical diagram would enhance the blog.
+   - Use the placeholder format: \`[IMG-PLACEHOLDER: short_description]\` at those locations.
+7. End with a strong Conclusion and a soft Call to Action.
 
-## Introduction (120-150 words)
-[Engaging introduction that hooks the reader]
+CATEGORY SELECTION:
+Choose the most appropriate category from: ${categories.filter(c => c !== "All").join(", ")}
 
-## [Main Section 1]
-[Detailed content with H3 subheadings, bullet points, examples]
+METADATA BLOCK (MANDATORY):
+At the very top of your response, before anything else, include this exact block:
+---
+Selected-Category: [Your Choice]
+---
 
-### [Subsection]
-[Content with practical tips]
-
-## [Main Section 2]
-[More detailed content]
-
-## [Main Section 3]
-[Continue with valuable information]
-
-## Key Takeaways
-- [Bullet point 1]
-- [Bullet point 2]
-- [Bullet point 3]
-
-## [Last Conclusion Section]
-[Content of Conclusion]
-
-## [Soft CTA Section]
-[Natural mention of how BandhanNova AI can help]
+IMAGE PROMPTS SECTION (MANDATORY):
+At the very end of your response, after the conclusion, provide a detailed section for the editor:
+# IMAGE_PROMPTS_START
+[IMG-1]: Provide a 3-5 line high-fidelity AI image generation prompt for the first placeholder.
+[IMG-2]: Provide a 3-5 line high-fidelity AI image generation prompt for the second placeholder.
+...and so on. If a DIAGRAM is needed, describe its exact name and detail in 5 lines.
+# IMAGE_PROMPTS_END
 
 Write the complete blog post in markdown format now:`;
 
@@ -91,7 +99,11 @@ Write the complete blog post in markdown format now:`;
 }
 
 export async function generateBlogMetadata(content: string) {
-    // Extract title from markdown
+    // Extract category from metadata block
+    const categoryMatch = content.match(/Selected-Category:\s+(.+)/i);
+    const category = categoryMatch ? categoryMatch[1].trim() : "AI & Technology";
+
+    // Extract title from markdown (ignoring metadata block)
     const titleMatch = content.match(/^#\s+(.+)$/m);
     const title = titleMatch ? titleMatch[1].replace(/[#*_`]/g, '').trim() : "Untitled Blog Post";
 
@@ -128,11 +140,33 @@ export async function generateBlogMetadata(content: string) {
     const wordCount = content.split(/\s+/).length;
     const readTime = Math.ceil(wordCount / 200);
 
+    // Extract image prompts
+    const imagePrompts: { id: string; prompt: string }[] = [];
+    const promptSectionMatch = content.match(/# IMAGE_PROMPTS_START([\s\S]+?)# IMAGE_PROMPTS_END/);
+    if (promptSectionMatch) {
+        const promptLines = promptSectionMatch[1].trim().split('\n');
+        promptLines.forEach(line => {
+            const match = line.match(/\[(IMG-\d+)\]:\s*(.+)/);
+            if (match) {
+                imagePrompts.push({ id: match[1], prompt: match[2] });
+            }
+        });
+    }
+
+    // Remove metadata blocks from the final content to avoid showing them to users
+    const cleanContent = content
+        .replace(/---[\s\S]+?Selected-Category:[\s\S]+?---/, '')
+        .replace(/# IMAGE_PROMPTS_START[\s\S]+?# IMAGE_PROMPTS_END/, '')
+        .trim();
+
     return {
         title,
         slug,
         excerpt,
         tags,
         readTime,
+        category,
+        imagePrompts,
+        cleanContent,
     };
 }

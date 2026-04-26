@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,33 +7,101 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Sparkles, Copy, Check, LogOut, Upload, X, Trash2, RefreshCw } from "lucide-react";
+import { 
+    Loader2, 
+    Sparkles, 
+    LogOut, 
+    Upload, 
+    X, 
+    Trash2, 
+    RefreshCw,
+    FileText,
+    ArrowUpRight,
+    Eye,
+    TrendingUp,
+    Edit3,
+    Search,
+    ChevronRight,
+    Plus,
+    Code,
+    Server,
+    Shield,
+    Globe,
+    GraduationCap,
+    Zap,
+    PenTool,
+    Box,
+    Briefcase,
+    Clock as ClockIcon,
+    Brain as BrainIcon,
+    Image as ImageIcon
+} from "lucide-react";
 import { categories } from "@/lib/blog-data";
 import Image from "next/image";
-import type { Blog } from "@/lib/supabase/types";
+import type { Blog } from "@/lib/blog-service";
 import { ImageCropper } from "@/components/image-cropper";
+import { markdownToHtml } from "@/lib/markdown-utils";
+import { AdminSidebar } from "@/components/admin-sidebar";
+import { cn } from "@/lib/utils";
+import { ShoppingCart, Video, Layout, Info } from "lucide-react";
 
 export default function AdminPage() {
     const router = useRouter();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("overview");
 
     // Blog generation states
     const [topic, setTopic] = useState("");
-    const [category, setCategory] = useState("AI & Technology");
+    const [category, setCategory] = useState(""); // Default empty for auto-selection
     const [thumbnail, setThumbnail] = useState<File | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState("");
     const [showCropper, setShowCropper] = useState(false);
     const [imageToCrop, setImageToCrop] = useState("");
     const [generating, setGenerating] = useState(false);
     const [generatedBlog, setGeneratedBlog] = useState("");
+    const [authorName, setAuthorName] = useState("BandhanNova AI Team");
+    const [authorAvatarPreview, setAuthorAvatarPreview] = useState("/bandhannova-logo-final.svg");
     const [metadata, setMetadata] = useState<any>(null);
-    const [copied, setCopied] = useState(false);
+    const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
+    const [editMode, setEditMode] = useState(false);
+
+    // Image Prompt States
+    const [placeholderImages, setPlaceholderImages] = useState<Record<string, string>>({});
+    const [uploadingPlaceholder, setUploadingPlaceholder] = useState<string | null>(null);
+
+    // Simplified Source Context
+    const [sources, setSources] = useState<string[]>([""]);
+
+    // Products states
+    const [products, setProducts] = useState<any[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+    const [editingProductId, setEditingProductId] = useState<string | null>(null);
+    const [productForm, setProductForm] = useState({
+        type: "affiliate",
+        title: "",
+        thumbnail: "",
+        link: "",
+        video_url: "",
+        cta_text: "",
+        cta_link: ""
+    });
+
+    // Section Layout Orchestrator States
+    const [sectionLayouts, setSectionLayouts] = useState<any[]>([]);
+    const [showProductManager, setShowProductManager] = useState(false);
 
     // Published blogs states
     const [publishedBlogs, setPublishedBlogs] = useState<Blog[]>([]);
     const [loadingBlogs, setLoadingBlogs] = useState(false);
+
+    // Stats
+    const [stats, setStats] = useState({
+        totalBlogs: 0,
+        totalViews: 0,
+        uniqueCategories: 0,
+        avgReadTime: 0
+    });
 
     useEffect(() => {
         checkAuth();
@@ -54,55 +123,53 @@ export default function AdminPage() {
         }
     };
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchPublishedBlogs();
+            fetchProducts();
+        }
+    }, [isAuthenticated]);
+
+    const fetchProducts = async () => {
+        setLoadingProducts(true);
+        try {
+            const response = await fetch("/api/products");
+            if (response.ok) {
+                const data = await response.json();
+                setProducts(data.products || []);
+            }
+        } catch (error) {
+            console.error("Error fetching products:", error);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
     const fetchPublishedBlogs = async () => {
         setLoadingBlogs(true);
         try {
             const response = await fetch("/api/blogs");
             if (response.ok) {
                 const data = await response.json();
-                setPublishedBlogs(data.blogs || []);
+                const blogs = data.blogs || [];
+                setPublishedBlogs(blogs);
+                
+                const totalViews = blogs.reduce((acc: number, blog: Blog) => acc + (blog.view_count || 0), 0);
+                const categoriesCount = new Set(blogs.map((b: Blog) => b.category)).size;
+                const totalReadTime = blogs.reduce((acc: number, blog: Blog) => acc + (blog.read_time || 0), 0);
+                
+                setStats({
+                    totalBlogs: blogs.length,
+                    totalViews,
+                    uniqueCategories: categoriesCount,
+                    avgReadTime: blogs.length ? Math.round(totalReadTime / blogs.length) : 0
+                });
             }
         } catch (error) {
             console.error("Error fetching blogs:", error);
         } finally {
             setLoadingBlogs(false);
         }
-    };
-
-    const handleLogout = async () => {
-        await fetch("/api/auth/logout", { method: "POST" });
-        router.push("/admin/login");
-    };
-
-    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImageToCrop(reader.result as string);
-                setShowCropper(true);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleCropComplete = (croppedBlob: Blob) => {
-        const croppedFile = new File([croppedBlob], "thumbnail.jpg", { type: "image/jpeg" });
-        setThumbnail(croppedFile);
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setThumbnailPreview(reader.result as string);
-        };
-        reader.readAsDataURL(croppedBlob);
-
-        setShowCropper(false);
-        setImageToCrop("");
-    };
-
-    const handleCropCancel = () => {
-        setShowCropper(false);
-        setImageToCrop("");
     };
 
     const handleGenerate = async () => {
@@ -114,19 +181,42 @@ export default function AdminPage() {
         setGenerating(true);
         setGeneratedBlog("");
         setMetadata(null);
+        setPlaceholderImages({});
 
         try {
             const response = await fetch("/api/generate-blog", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ topic, category }),
+                body: JSON.stringify({ 
+                    topic, 
+                    category,
+                    sources: sources.filter(s => s.trim())
+                }),
             });
 
             if (!response.ok) throw new Error("Failed to generate blog");
 
             const data = await response.json();
-            setGeneratedBlog(data.content);
+            setGeneratedBlog(data.metadata.cleanContent || data.content);
             setMetadata(data.metadata);
+            
+            // Sync category with AI's choice
+            if (data.metadata.category) {
+                setCategory(data.metadata.category);
+            }
+
+            // Auto-detect headings
+            const headingRegex = /^##\s+(.+)$/gm;
+            const headings: string[] = [];
+            let match;
+            while ((match = headingRegex.exec(data.content)) !== null) {
+                headings.push(match[1].replace(/[*_~`]/g, '').trim());
+            }
+            setSectionLayouts(headings.map(h => ({
+                heading: h,
+                left: { type: "nothing" },
+                right: { type: "nothing" },
+            })));
         } catch (error) {
             console.error("Error:", error);
             alert("Failed to generate blog. Please try again.");
@@ -135,12 +225,42 @@ export default function AdminPage() {
         }
     };
 
+    const handlePlaceholderUpload = async (placeholderId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingPlaceholder(placeholderId);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await fetch("/api/blogs/upload-thumbnail", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (response.ok) {
+                const { url } = await response.json();
+                setPlaceholderImages(prev => ({ ...prev, [placeholderId]: url }));
+                
+                // Replace in content
+                setGeneratedBlog(prev => prev.replace(new RegExp(`\\[IMG-PLACEHOLDER:[^\\]]*\\]`, 'i'), `![Blog Image](${url})`));
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+        } finally {
+            setUploadingPlaceholder(null);
+        }
+    };
+
     const handlePublish = async () => {
         if (!generatedBlog || !metadata) return;
 
         setGenerating(true);
         try {
-            let thumbnailUrl = "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop";
+            let thumbnailUrl = editingBlogId 
+                ? publishedBlogs.find(b => b.id === editingBlogId)?.thumbnail_url 
+                : "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop";
 
             if (thumbnail) {
                 const formData = new FormData();
@@ -157,40 +277,103 @@ export default function AdminPage() {
                 }
             }
 
-            const response = await fetch("/api/blogs", {
-                method: "POST",
+            const blogData = {
+                title: metadata.title,
+                slug: metadata.slug,
+                excerpt: metadata.excerpt,
+                content: generatedBlog,
+                category,
+                author_name: authorName,
+                author_avatar: authorAvatarPreview,
+                thumbnail_url: thumbnailUrl,
+                read_time: metadata.readTime,
+                tags: metadata.tags,
+                sources: sources.filter(s => s.trim()).map(url => ({ url, content: "" })),
+                section_layouts: sectionLayouts,
+                published_at: editingBlogId 
+                    ? publishedBlogs.find(b => b.id === editingBlogId)?.published_at 
+                    : new Date().toISOString(),
+            };
+
+            const url = editingBlogId ? `/api/blogs/${editingBlogId}` : "/api/blogs";
+            const method = editingBlogId ? "PUT" : "POST";
+
+            const response = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title: metadata.title,
-                    slug: metadata.slug,
-                    excerpt: metadata.excerpt,
-                    content: generatedBlog,
-                    category,
-                    author_name: "BandhanNova AI Team",
-                    author_avatar: "/bandhannova-logo-final.svg",
-                    thumbnail_url: thumbnailUrl,
-                    read_time: metadata.readTime,
-                    tags: metadata.tags,
-                    published_at: new Date().toISOString(),
-                }),
+                body: JSON.stringify(blogData),
             });
 
-            if (!response.ok) throw new Error("Failed to publish blog");
+            if (!response.ok) throw new Error("Failed to save blog");
 
-            alert("Blog published successfully! 🎉");
+            alert(editingBlogId ? "Blog updated successfully! 🎉" : "Blog published successfully! 🎉");
 
+            // Reset form
             setTopic("");
             setThumbnail(null);
             setThumbnailPreview("");
             setGeneratedBlog("");
             setMetadata(null);
+            setEditingBlogId(null);
+            setSources([""]);
+            setCategory("");
+            setActiveTab("blogs");
 
             fetchPublishedBlogs();
         } catch (error) {
             console.error("Error:", error);
-            alert("Failed to publish blog. Please try again.");
+            alert("Failed to save blog. Please try again.");
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const handleEditBlog = (blog: Blog) => {
+        setEditingBlogId(blog.id);
+        setTopic(blog.title);
+        setCategory(blog.category);
+        setGeneratedBlog(blog.content);
+        setMetadata({
+            title: blog.title,
+            slug: blog.slug,
+            excerpt: blog.excerpt,
+            readTime: blog.read_time,
+            tags: blog.tags,
+            imagePrompts: [] // Prompts aren't stored, but we can regenerate
+        });
+        setThumbnailPreview(blog.thumbnail_url);
+        setAuthorName(blog.author_name);
+        setAuthorAvatarPreview(blog.author_avatar);
+        setSectionLayouts(blog.section_layouts || []);
+        setSources((blog.sources as any[])?.map(s => s.url) || [""]);
+        setActiveTab("generate");
+    };
+
+    const handleUpsertProduct = async () => {
+        if (!productForm.title) return;
+        try {
+            const response = await fetch("/api/products", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editingProductId ? { ...productForm, id: editingProductId } : productForm),
+            });
+            if (response.ok) {
+                setEditingProductId(null);
+                setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "" });
+                fetchProducts();
+            }
+        } catch (error) {
+            console.error("Error saving product:", error);
+        }
+    };
+
+    const handleDeleteProduct = async (id: string) => {
+        if (!confirm("Delete this product?")) return;
+        try {
+            const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
+            if (response.ok) fetchProducts();
+        } catch (error) {
+            console.error("Error deleting product:", error);
         }
     };
 
@@ -212,294 +395,771 @@ export default function AdminPage() {
         }
     };
 
-    const copyToClipboard = () => {
-        if (!generatedBlog || !metadata) return;
+    const syncHeadings = () => {
+        const headingRegex = /^##\s+(.+)$/gm;
+        const headings: string[] = [];
+        let match;
+        while ((match = headingRegex.exec(generatedBlog)) !== null) {
+            headings.push(match[1].replace(/[*_~`]/g, '').trim());
+        }
 
-        const blogObject = `{
-  id: "${Date.now()}",
-  slug: "${metadata.slug}",
-  title: "${metadata.title}",
-  excerpt: "${metadata.excerpt}",
-  content: \`${generatedBlog}\`,
-  category: "${category}",
-  author: {
-    name: "BandhanNova AI Team",
-    avatar: "/bandhannova-logo-final.svg",
-  },
-  publishedAt: new Date("${new Date().toISOString().split('T')[0]}"),
-  readTime: ${metadata.readTime},
-  image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop",
-  tags: ${JSON.stringify(metadata.tags)},
-},`;
+        setSectionLayouts(prev => {
+            return headings.map(h => {
+                const existing = prev.find(p => p.heading === h);
+                return existing || {
+                    heading: h,
+                    left: { type: "nothing" },
+                    right: { type: "nothing" },
+                };
+            });
+        });
+    };
 
-        navigator.clipboard.writeText(blogObject);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const updateSectionLayout = (index: number, side: 'left' | 'right', type: string, data?: any) => {
+        setSectionLayouts(prev => {
+            const next = JSON.parse(JSON.stringify(prev));
+            if (side === 'left') {
+                next[index].left = { type, ...data };
+            } else {
+                next[index].right = { type, ...data };
+            }
+            return next;
+        });
+    };
+
+    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageToCrop(reader.result as string);
+                setShowCropper(true);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleCropComplete = (croppedBlob: Blob) => {
+        const croppedFile = new File([croppedBlob], "thumbnail.jpg", { type: "image/jpeg" });
+        setThumbnail(croppedFile);
+
+        const reader = new FileReader();
+        reader.onloadend = () => setThumbnailPreview(reader.result as string);
+        reader.readAsDataURL(croppedBlob);
+
+        setShowCropper(false);
+        setImageToCrop("");
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-black">
+                <div className="text-center space-y-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto opacity-50" />
+                    <p className="text-muted-foreground font-black uppercase tracking-[0.4em] text-[10px] animate-pulse">Syncing Hub...</p>
+                </div>
             </div>
         );
     }
 
-    if (!isAuthenticated) {
-        return null;
-    }
+    if (!isAuthenticated) return null;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-6 md:p-12">
-            <div className="max-w-7xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                        <h1 className="text-5xl font-bold gradient-text">
-                            🤖 AI Blog Generator
-                        </h1>
-                        <p className="text-xl text-muted-foreground">
-                            Powered by OpenRouter • xiaomi/mimo-v2-flash ✨
-                        </p>
+        <div className="min-h-screen bg-[#050505] text-white selection:bg-primary/30">
+            <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+            
+            <main className="pl-64 min-h-screen">
+                {/* Minimal Header */}
+                <header className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-40">
+                    <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">{activeTab}</span>
+                        <div className="h-3 w-px bg-white/10" />
+                        <h2 className="text-xs font-bold text-muted-foreground/60">BandhanNova Blogs</h2>
                     </div>
-                    <Button variant="outline" onClick={handleLogout} className="gap-2">
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </Button>
-                </div>
+                    <div className="flex items-center gap-6">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
+                            <Search className="h-4 w-4 text-muted-foreground/40" />
+                        </Button>
+                    </div>
+                </header>
 
-                {/* Tabs */}
-                <Tabs defaultValue="generate" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="generate">Generate Blog</TabsTrigger>
-                        <TabsTrigger value="published">Published Blogs ({publishedBlogs.length})</TabsTrigger>
-                    </TabsList>
+                <div className="p-10 max-w-6xl mx-auto space-y-10">
+                    
+                    {/* OVERVIEW TAB */}
+                    {activeTab === "overview" && (
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">Dashboard</h1>
+                                <p className="text-muted-foreground text-sm">Welcome back to the content command center.</p>
+                            </div>
 
-                    {/* Generate Tab */}
-                    <TabsContent value="generate" className="space-y-6">
-                        <Card className="border-2">
-                            <CardHeader>
-                                <CardTitle className="text-2xl">Generate New Blog Post 📝</CardTitle>
-                                <CardDescription className="text-base">
-                                    Enter a topic, upload thumbnail, and let AI create SEO-optimized content
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Topic</label>
-                                    <Input
-                                        placeholder="e.g., How AI is Transforming Education"
-                                        value={topic}
-                                        onChange={(e) => setTopic(e.target.value)}
-                                        className="text-lg h-12"
-                                        disabled={generating}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Category</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {categories.filter(c => c !== "All").map((cat) => (
-                                            <Badge
-                                                key={cat}
-                                                variant={category === cat ? "default" : "outline"}
-                                                className="cursor-pointer text-sm px-4 py-2"
-                                                onClick={() => !generating && setCategory(cat)}
-                                            >
-                                                {cat}
-                                            </Badge>
-                                        ))}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {[
+                                    { label: "Total Blogs", value: stats.totalBlogs, icon: FileText, color: "text-blue-500" },
+                                    { label: "Total Views", value: stats.totalViews.toLocaleString(), icon: Eye, color: "text-purple-500" },
+                                    { label: "Categories", value: stats.uniqueCategories, icon: TrendingUp, color: "text-emerald-500" },
+                                    { label: "Avg Read", value: `${stats.avgReadTime}m`, icon: TrendingUp, color: "text-amber-500" },
+                                ].map((stat, i) => (
+                                    <div key={i} className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className={cn("p-2 rounded-xl bg-current opacity-10", stat.color)} />
+                                            <stat.icon className={cn("h-4 w-4", stat.color)} />
+                                        </div>
+                                        <p className="text-2xl font-black tracking-tight">{stat.value}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mt-1">{stat.label}</p>
                                     </div>
-                                </div>
+                                ))}
+                            </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Thumbnail Image (Optional)</label>
-                                    <div className="flex items-center gap-4">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => document.getElementById("thumbnail-upload")?.click()}
-                                            disabled={generating}
-                                            className="gap-2"
-                                        >
-                                            <Upload className="h-4 w-4" />
-                                            Choose Image
-                                        </Button>
-                                        <input
-                                            id="thumbnail-upload"
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleThumbnailChange}
-                                            className="hidden"
-                                        />
-                                        {thumbnail && <span className="text-sm text-muted-foreground">{thumbnail.name}</span>}
-                                    </div>
-                                    {thumbnailPreview && (
-                                        <div className="relative w-full h-48 rounded-lg overflow-hidden border-2">
-                                            <Image src={thumbnailPreview} alt="Preview" fill className="object-cover" />
-                                            <Button
-                                                size="icon"
-                                                variant="destructive"
-                                                className="absolute top-2 right-2"
-                                                onClick={() => {
-                                                    setThumbnail(null);
-                                                    setThumbnailPreview("");
-                                                }}
-                                            >
-                                                <X className="h-4 w-4" />
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <Card className="lg:col-span-2 bg-white/[0.02] border-white/5 rounded-[2rem] overflow-hidden">
+                                    <CardHeader className="p-8 pb-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-lg font-black tracking-tight">Recent Activity</CardTitle>
+                                                <CardDescription className="text-xs">Your latest published intelligence.</CardDescription>
+                                            </div>
+                                            <Button variant="ghost" size="sm" onClick={() => setActiveTab("blogs")} className="text-[10px] font-black uppercase tracking-widest gap-2">
+                                                View All <ChevronRight className="h-3 w-3" />
                                             </Button>
                                         </div>
-                                    )}
-                                </div>
-
-                                <Button
-                                    onClick={handleGenerate}
-                                    disabled={generating || !topic.trim()}
-                                    size="lg"
-                                    className="w-full text-lg h-14"
-                                >
-                                    {generating ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                            Generating Amazing Content...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles className="mr-2 h-5 w-5" />
-                                            Generate Blog Post 🚀
-                                        </>
-                                    )}
-                                </Button>
-                            </CardContent>
-                        </Card>
-
-                        {/* Generated Content */}
-                        {generatedBlog && metadata && (
-                            <Card className="border-2 border-primary/20">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-2xl">Generated Blog ✨</CardTitle>
-                                        <div className="flex gap-2">
-                                            <Button onClick={copyToClipboard} variant="outline" className="gap-2">
-                                                {copied ? (
-                                                    <>
-                                                        <Check className="h-4 w-4" />
-                                                        Copied!
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Copy className="h-4 w-4" />
-                                                        Copy Code
-                                                    </>
-                                                )}
-                                            </Button>
-                                            <Button onClick={handlePublish} disabled={generating} className="gap-2">
-                                                <Sparkles className="h-4 w-4" />
-                                                Publish to Database ✨
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <CardDescription className="text-base">
-                                        Review and publish your blog post
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">Title</p>
-                                            <p className="font-semibold">{metadata.title}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">Slug</p>
-                                            <p className="font-mono text-sm">{metadata.slug}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground">Read Time</p>
-                                            <p className="font-semibold">{metadata.readTime} min ⏱️</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <p className="text-sm font-medium">Content Preview:</p>
-                                        <div className="max-h-96 overflow-y-auto p-6 bg-muted/30 rounded-lg prose prose-sm max-w-none">
-                                            <pre className="whitespace-pre-wrap text-sm">{generatedBlog.substring(0, 500)}...</pre>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </TabsContent>
-
-                    {/* Published Blogs Tab */}
-                    <TabsContent value="published" className="space-y-6">
-                        <Card className="border-2">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-2xl">Published Blogs 📚</CardTitle>
-                                        <CardDescription className="text-base">
-                                            Manage your published blog posts
-                                        </CardDescription>
-                                    </div>
-                                    <Button onClick={fetchPublishedBlogs} variant="outline" size="icon">
-                                        <RefreshCw className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {loadingBlogs ? (
-                                    <div className="flex items-center justify-center py-12">
-                                        <Loader2 className="h-8 w-8 animate-spin" />
-                                    </div>
-                                ) : publishedBlogs.length === 0 ? (
-                                    <div className="text-center py-12 text-muted-foreground">
-                                        <p className="text-lg">No blogs published yet</p>
-                                        <p className="text-sm">Generate and publish your first blog!</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {publishedBlogs.map((blog) => (
-                                            <div key={blog.id} className="flex gap-2 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                                <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden flex-shrink-0">
-                                                    <Image
-                                                        src={blog.thumbnail_url}
-                                                        alt={blog.title}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h3 className="font-semibold text-sm sm:text-base line-clamp-2 mb-1">{blog.title}</h3>
-                                                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                                                        <Badge variant="outline" className="text-xs">{blog.category}</Badge>
-                                                        <span className="hidden sm:inline">{blog.read_time} min</span>
-                                                        <span className="text-xs">{new Date(blog.published_at).toLocaleDateString()}</span>
+                                    </CardHeader>
+                                    <CardContent className="p-8 pt-0">
+                                        <div className="divide-y divide-white/5">
+                                            {publishedBlogs.slice(0, 4).map((blog) => (
+                                                <div key={blog.id} className="py-4 flex items-center justify-between group cursor-pointer" onClick={() => handleEditBlog(blog)}>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-10 w-10 rounded-xl overflow-hidden border border-white/10 flex-shrink-0">
+                                                            <Image src={blog.thumbnail_url} alt="" width={40} height={40} className="object-cover h-full" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-bold truncate max-w-[300px] group-hover:text-primary transition-colors">{blog.title}</h4>
+                                                            <p className="text-[10px] text-muted-foreground/50 uppercase font-black tracking-widest mt-0.5">{blog.category}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 text-muted-foreground/40">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Eye className="h-3 w-3" />
+                                                            <span className="text-[10px] font-bold">{blog.view_count || 0}</span>
+                                                        </div>
+                                                        <ArrowUpRight className="h-3 w-3 group-hover:text-white transition-colors" />
                                                     </div>
                                                 </div>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    onClick={() => handleDeleteBlog(blog.id, blog.title)}
-                                                    className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 bg-red-600 hover:bg-red-700 text-white"
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <div className="space-y-4">
+                                    <div className="p-8 rounded-[2rem] bg-primary/10 border border-primary/20 relative overflow-hidden group hover:bg-primary/[0.15] transition-all cursor-pointer" onClick={() => setActiveTab("generate")}>
+                                        <div className="relative z-10">
+                                            <Sparkles className="h-6 w-6 text-primary mb-4" />
+                                            <h3 className="text-lg font-black tracking-tight mb-1">Create New</h3>
+                                            <p className="text-xs text-muted-foreground font-medium leading-relaxed">Launch the AI Generator to architect fresh content.</p>
+                                        </div>
+                                        <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/20 blur-3xl rounded-full group-hover:scale-150 transition-transform duration-700" />
+                                    </div>
+                                    
+                                    <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/30 mb-6">Quick Tools</h3>
+                                        <div className="space-y-2">
+                                            <button onClick={fetchPublishedBlogs} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                                                <span className="text-xs font-bold text-muted-foreground/60 group-hover:text-white">Refresh Fleet</span>
+                                                <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground/30", loadingBlogs && "animate-spin")} />
+                                            </button>
+                                            <button onClick={() => router.push("/")} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+                                                <span className="text-xs font-bold text-muted-foreground/60 group-hover:text-white">View Site</span>
+                                                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/30" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* GENERATE TAB */}
+                    {activeTab === "generate" && (
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-1">
+                                    <h1 className="text-3xl font-black tracking-tighter">
+                                        {editingBlogId ? "Edit Intelligence" : "AI Generator"}
+                                    </h1>
+                                    <p className="text-sm text-muted-foreground">Architect SEO-optimized technical content with precision.</p>
+                                </div>
+                                {editingBlogId && (
+                                    <Button variant="ghost" onClick={() => { setEditingBlogId(null); setTopic(""); setGeneratedBlog(""); }} className="text-red-400/60 hover:text-red-500 hover:bg-red-500/5 text-xs font-black uppercase tracking-widest">
+                                        Discard Edit
+                                    </Button>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-2 space-y-6">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-[2.5rem] p-8 space-y-8">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Topic</label>
+                                            <Input
+                                                placeholder="e.g., The Evolution of Distributed Computing"
+                                                value={topic}
+                                                onChange={(e) => setTopic(e.target.value)}
+                                                className="bg-white/5 border-white/10 h-14 text-lg font-bold rounded-2xl focus:ring-1 ring-primary/30"
+                                                disabled={generating}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between ml-1">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Context Sources (Multi-Scrape)</label>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => setSources(prev => [...prev, ""])}
+                                                    className="h-6 text-[8px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10"
                                                 >
-                                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                    <Plus className="h-2.5 w-2.5 mr-1" /> Add Source
                                                 </Button>
                                             </div>
-                                        ))}
+                                            <div className="space-y-2">
+                                                {sources.map((src, idx) => (
+                                                    <div key={idx} className="relative group">
+                                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                                                        <Input
+                                                            placeholder="https://example.com/source-article"
+                                                            value={src}
+                                                            onChange={(e) => {
+                                                                const next = [...sources];
+                                                                next[idx] = e.target.value;
+                                                                setSources(next);
+                                                            }}
+                                                            className="bg-white/5 border-white/10 h-12 pl-12 pr-12 text-sm rounded-xl focus:ring-1 ring-primary/30"
+                                                            disabled={generating}
+                                                        />
+                                                        {sources.length > 1 && (
+                                                            <button 
+                                                                onClick={() => setSources(prev => prev.filter((_, i) => i !== idx))}
+                                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/20 hover:text-red-500 transition-colors"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p className="text-[9px] text-muted-foreground/30 uppercase font-black tracking-widest ml-1">AI will synthesize knowledge from all active sources concurrently.</p>
+                                        </div>
+
+                                        <Button 
+                                            onClick={handleGenerate} 
+                                            disabled={generating || !topic.trim()} 
+                                            className="w-full h-16 rounded-2xl bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all group overflow-hidden"
+                                        >
+                                            {generating ? (
+                                                <Loader2 className="h-5 w-5 animate-spin opacity-50" />
+                                            ) : (
+                                                <div className="flex items-center gap-3">
+                                                    <Sparkles className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                                    {editingBlogId ? "Regenerate Content" : "Execute Generation"}
+                                                </div>
+                                            )}
+                                        </Button>
+                                    </Card>
+
+                                    {/* AI IMAGE STRATEGY SECTION */}
+                                    {metadata?.imagePrompts && metadata.imagePrompts.length > 0 && (
+                                        <Card className="bg-white/[0.02] border-white/5 rounded-[2.5rem] p-8 space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-lg font-black tracking-tight">AI Image Strategy</h3>
+                                                    <p className="text-xs text-muted-foreground">The AI has identified strategic points for visual content.</p>
+                                                </div>
+                                                <ImageIcon className="h-5 w-5 text-primary/40" />
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                {metadata.imagePrompts.map((item: any) => (
+                                                    <div key={item.id} className="p-6 rounded-3xl bg-white/[0.01] border border-white/5 space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-primary/20 text-primary">
+                                                                {item.id}
+                                                            </Badge>
+                                                            {placeholderImages[item.id] && (
+                                                                <div className="flex items-center gap-2 text-emerald-500 text-[8px] font-black uppercase tracking-widest">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                                    Uploaded
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground/80 leading-relaxed italic border-l-2 border-white/10 pl-4 py-1">
+                                                            "{item.prompt}"
+                                                        </p>
+                                                        
+                                                        <div className="flex items-center gap-3">
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm" 
+                                                                onClick={() => document.getElementById(`upload-${item.id}`)?.click()}
+                                                                disabled={uploadingPlaceholder === item.id}
+                                                                className="h-9 px-6 rounded-xl text-[9px] font-black uppercase tracking-widest border-white/5 bg-white/5 hover:bg-white/10"
+                                                            >
+                                                                {uploadingPlaceholder === item.id ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Upload className="h-3 w-3 mr-2" />}
+                                                                {placeholderImages[item.id] ? "Change Image" : "Upload Asset"}
+                                                            </Button>
+                                                            <input 
+                                                                id={`upload-${item.id}`} 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={(e) => handlePlaceholderUpload(item.id, e)} 
+                                                                className="hidden" 
+                                                            />
+                                                            {placeholderImages[item.id] && (
+                                                                <div className="h-9 w-16 relative rounded-lg overflow-hidden border border-white/10">
+                                                                    <Image src={placeholderImages[item.id]} alt="" fill className="object-cover" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </Card>
+                                    )}
+                                </div>
+
+                                <div className="space-y-6">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-[2.5rem] p-6 space-y-6">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 ml-1">Thumbnail</label>
+                                            <div 
+                                                className={cn(
+                                                    "relative aspect-video w-full rounded-[2rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center hover:border-primary/20 transition-all cursor-pointer overflow-hidden group",
+                                                    thumbnailPreview && "border-solid border-white/10"
+                                                )}
+                                                onClick={() => !generating && document.getElementById("thumb-upload")?.click()}
+                                            >
+                                                {thumbnailPreview ? (
+                                                    <Image src={thumbnailPreview} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                                                ) : (
+                                                    <Upload className="h-6 w-6 text-white/10" />
+                                                )}
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Upload className="h-5 w-5" />
+                                                </div>
+                                            </div>
+                                            <input id="thumb-upload" type="file" accept="image/*" onChange={handleThumbnailChange} className="hidden" />
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between ml-1">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Classification (AI Choice)</label>
+                                                {category && (
+                                                    <button onClick={() => setCategory("")} className="text-[8px] font-black uppercase tracking-widest text-primary hover:underline">Auto-Reset</button>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {categories.filter(c => c !== "All").map((cat) => {
+                                                    const iconMap: any = {
+                                                        "AI & Technology": Sparkles,
+                                                        "Software Development": Code,
+                                                        "Cloud & DevOps": Server,
+                                                        "Cybersecurity": Shield,
+                                                        "Web 3.0 & Blockchain": Globe,
+                                                        "Learning & Education": GraduationCap,
+                                                        "Digital Skill Development": Zap,
+                                                        "Blogging & Content": PenTool,
+                                                        "Tools & Resources": Box,
+                                                        "Business & Startups": Briefcase,
+                                                        "Productivity": ClockIcon,
+                                                        "Research & Innovation": BrainIcon
+                                                    };
+                                                    const Icon = iconMap[cat] || Box;
+                                                    const isSelected = category === cat;
+                                                    
+                                                    return (
+                                                        <button
+                                                            key={cat}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (generating) return;
+                                                                if (isSelected) setCategory(""); // Deselect
+                                                                else setCategory(cat); // Select
+                                                            }}
+                                                            className={cn(
+                                                                "flex items-center gap-2 px-3 py-3 rounded-xl border transition-all text-left group",
+                                                                isSelected 
+                                                                    ? "bg-primary border-primary shadow-lg shadow-primary/20 text-white" 
+                                                                    : "bg-white/[0.02] border-white/5 text-muted-foreground hover:bg-white/5 hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <Icon className={cn("h-3.5 w-3.5", isSelected ? "text-white" : "text-muted-foreground/30 group-hover:text-primary")} />
+                                                            <span className="text-[9px] font-black uppercase tracking-widest leading-none truncate">{cat}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </div>
+                            </div>
+
+                            {/* Draft Review */}
+                            {generatedBlog && (
+                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="text-xl font-black tracking-tighter">Draft Review</h3>
+                                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] font-black tracking-widest">
+                                                AI ARCHITECTED
+                                            </Badge>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <Button variant="ghost" onClick={() => setGeneratedBlog("")} className="text-muted-foreground hover:text-white text-xs font-bold px-4">Discard</Button>
+                                            <Button onClick={handlePublish} className="rounded-xl bg-primary px-6 font-black uppercase tracking-widest text-[10px] shadow-lg h-11">
+                                                {editingBlogId ? "Update Intelligence" : "Push to Production"}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                                        <div className="lg:col-span-3 bg-white/[0.01] rounded-[2.5rem] p-10 border border-white/5 shadow-2xl overflow-hidden relative group">
+                                            <div className="absolute top-6 right-6 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => setEditMode(!editMode)}
+                                                    className="h-8 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-black/60 backdrop-blur-md border-white/10"
+                                                >
+                                                    {editMode ? "View Preview" : "Edit Markdown"}
+                                                </Button>
+                                            </div>
+
+                                            {editMode ? (
+                                                <textarea
+                                                    value={generatedBlog}
+                                                    onChange={(e) => setGeneratedBlog(e.target.value)}
+                                                    className="w-full h-[800px] bg-transparent text-muted-foreground/90 font-mono text-sm leading-relaxed outline-none resize-none scrollbar-thin scrollbar-thumb-white/10"
+                                                    placeholder="Blog content in markdown..."
+                                                />
+                                            ) : (
+                                                <div 
+                                                    className="prose prose-invert prose-sm md:prose-base max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-p:text-muted-foreground/80 prose-strong:text-primary prose-blockquote:border-l-primary prose-blockquote:bg-white/5 prose-blockquote:rounded-r-2xl prose-blockquote:p-6 prose-img:rounded-[2rem] prose-img:border prose-img:border-white/10"
+                                                    dangerouslySetInnerHTML={{ __html: markdownToHtml(generatedBlog) }}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
+                                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/60">Metadata</h4>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Slug</p>
+                                                        <p className="text-[10px] font-mono text-muted-foreground truncate">{metadata?.slug}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 mb-1">Tags</p>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {metadata?.tags?.slice(0, 5).map((tag: string) => (
+                                                                <span key={tag} className="text-[8px] font-black uppercase tracking-tighter text-muted-foreground/40">#{tag}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Section Orchestrator */}
+                                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/60">Section Orchestrator</h4>
+                                                        <div className="flex gap-1.5">
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                onClick={() => setShowProductManager(!showProductManager)}
+                                                                className={cn(
+                                                                    "h-6 px-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                                                                    showProductManager ? "bg-primary text-white" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                                                                )}
+                                                            >
+                                                                {showProductManager ? "Close" : "Manage Products"}
+                                                            </Button>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                onClick={syncHeadings}
+                                                                className="h-6 px-3 rounded-lg text-[8px] font-black uppercase tracking-widest bg-white/5 text-muted-foreground hover:bg-white/10"
+                                                            >
+                                                                <RefreshCw className="h-2.5 w-2.5 mr-1" /> Sync Headings
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <Layout className="h-3.5 w-3.5 text-primary/40" />
+                                                </div>
+
+                                                {showProductManager && (
+                                                    <div className="space-y-6 p-6 rounded-2xl bg-white/[0.01] border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                        <div className="flex items-center justify-between">
+                                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Product Inventory</h5>
+                                                            <Badge variant="outline" className="text-[8px] font-black">{products.length} Items</Badge>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {/* Mini Form */}
+                                                            <div className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/10">
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Type</label>
+                                                                        <select 
+                                                                            className="w-full bg-black/40 border border-white/10 rounded-lg p-1.5 text-[10px] font-bold"
+                                                                            value={productForm.type}
+                                                                            onChange={(e) => setProductForm({ ...productForm, type: e.target.value as any })}
+                                                                        >
+                                                                            <option value="affiliate">Affiliate</option>
+                                                                            <option value="brand">Brand Ad</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div className="space-y-1">
+                                                                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Title</label>
+                                                                        <Input 
+                                                                            value={productForm.title}
+                                                                            onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
+                                                                            className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                {productForm.type === 'affiliate' ? (
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Link</label>
+                                                                            <Input 
+                                                                                value={productForm.link}
+                                                                                onChange={(e) => setProductForm({ ...productForm, link: e.target.value })}
+                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Thumbnail</label>
+                                                                            <Input 
+                                                                                value={productForm.thumbnail}
+                                                                                onChange={(e) => setProductForm({ ...productForm, thumbnail: e.target.value })}
+                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="space-y-2">
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Video URL</label>
+                                                                            <Input 
+                                                                                value={productForm.video_url}
+                                                                                onChange={(e) => setProductForm({ ...productForm, video_url: e.target.value })}
+                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <Input 
+                                                                                placeholder="CTA Text"
+                                                                                value={productForm.cta_text}
+                                                                                onChange={(e) => setProductForm({ ...productForm, cta_text: e.target.value })}
+                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                            />
+                                                                            <Input 
+                                                                                placeholder="CTA Link"
+                                                                                value={productForm.cta_link}
+                                                                                onChange={(e) => setProductForm({ ...productForm, cta_link: e.target.value })}
+                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="flex gap-2">
+                                                                    <Button onClick={handleUpsertProduct} className="flex-1 h-8 rounded-lg bg-primary text-[8px] font-black uppercase tracking-widest">
+                                                                        {editingProductId ? "Update" : "Save Product"}
+                                                                    </Button>
+                                                                    {editingProductId && (
+                                                                        <Button variant="ghost" onClick={() => { setEditingProductId(null); setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "" }); }} className="h-8 px-3 text-[8px] font-black uppercase tracking-widest">Cancel</Button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Mini List */}
+                                                            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                                                                {products.map((p) => (
+                                                                    <div key={p.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between group">
+                                                                        <div className="flex items-center gap-3 min-w-0">
+                                                                            <div className="h-8 w-8 rounded-lg bg-white/5 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
+                                                                                {p.type === 'brand' ? <Video className="h-3 w-3 text-primary/40" /> : <ShoppingCart className="h-3 w-3 text-blue-500/40" />}
+                                                                                {p.thumbnail && <Image src={p.thumbnail} alt="" width={32} height={32} className="object-cover" />}
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <p className="text-[10px] font-bold truncate">{p.title}</p>
+                                                                                <Badge className="h-3 px-1 text-[6px] font-black uppercase tracking-widest bg-white/5 text-muted-foreground/60">{p.type}</Badge>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                            <button onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="p-1 hover:text-primary"><Edit3 className="h-3 w-3" /></button>
+                                                                            <button onClick={() => handleDeleteProduct(p.id)} className="p-1 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                                                    {sectionLayouts.map((section, idx) => (
+                                                        <div key={idx} className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant="outline" className="text-[8px] font-black border-white/10 h-5">H2</Badge>
+                                                                <p className="text-[10px] font-bold truncate text-muted-foreground">{section.heading}</p>
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                {/* Left Slot */}
+                                                                <div className="space-y-2">
+                                                                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">Left Slot</p>
+                                                                    <select 
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] font-bold outline-none focus:ring-1 ring-primary/30"
+                                                                        value={section.left.type}
+                                                                        onChange={(e) => updateSectionLayout(idx, 'left', e.target.value)}
+                                                                    >
+                                                                        <option value="nothing">Nothing</option>
+                                                                        <option value="affiliate">Affiliate Link</option>
+                                                                        <option value="adsense">Adsense Card</option>
+                                                                    </select>
+                                                                    
+                                                                    {section.left.type === 'affiliate' && (
+                                                                        <select 
+                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg p-2 text-[10px] font-bold outline-none mt-2"
+                                                                            onChange={(e) => {
+                                                                                const item = products.find(p => p.title === e.target.value);
+                                                                                updateSectionLayout(idx, 'left', 'affiliate', { affiliate: item });
+                                                                            }}
+                                                                            value={section.left.affiliate?.title || ""}
+                                                                        >
+                                                                            <option value="" disabled>Select Item</option>
+                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title}>{a.title}</option>)}
+                                                                        </select>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Right Slot */}
+                                                                <div className="space-y-2">
+                                                                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">Right Slot</p>
+                                                                    <select 
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] font-bold outline-none focus:ring-1 ring-primary/30"
+                                                                        value={section.right.type}
+                                                                        onChange={(e) => updateSectionLayout(idx, 'right', e.target.value)}
+                                                                    >
+                                                                        <option value="nothing">Nothing</option>
+                                                                        <option value="brand_ad">Brand Video Ad</option>
+                                                                        <option value="affiliate">Affiliate Link</option>
+                                                                        <option value="adsense">Adsense Card</option>
+                                                                    </select>
+
+                                                                    {section.right.type === 'brand_ad' && (
+                                                                        <select 
+                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg p-2 text-[10px] font-bold outline-none mt-2"
+                                                                            onChange={(e) => {
+                                                                                const item = products.find(p => p.title === e.target.value);
+                                                                                updateSectionLayout(idx, 'right', 'brand_ad', { brand_ad: item });
+                                                                            }}
+                                                                            value={section.right.brand_ad?.title || ""}
+                                                                        >
+                                                                            <option value="" disabled>Select Ad</option>
+                                                                            {products.filter(p => p.type === 'brand').map(a => <option key={a.id} value={a.title}>{a.title}</option>)}
+                                                                        </select>
+                                                                    )}
+
+                                                                    {section.right.type === 'affiliate' && (
+                                                                        <select 
+                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg p-2 text-[10px] font-bold outline-none mt-2"
+                                                                            onChange={(e) => {
+                                                                                const item = products.find(p => p.title === e.target.value);
+                                                                                updateSectionLayout(idx, 'right', 'affiliate', { affiliate: item });
+                                                                            }}
+                                                                            value={section.right.affiliate?.title || ""}
+                                                                        >
+                                                                            <option value="" disabled>Select Item</option>
+                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title}>{a.title}</option>)}
+                                                                        </select>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="pt-2">
+                                                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-primary/5 border border-primary/10">
+                                                        <Info className="h-3.5 w-3.5 text-primary mt-0.5" />
+                                                        <p className="text-[9px] text-muted-foreground/60 leading-relaxed font-medium">
+                                                            Orchestrate sidebars for each section. Affiliate links and brand ads will be injected alongside the corresponding heading.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* BLOGS LIST TAB */}
+                    {activeTab === "blogs" && (
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">Content Repository</h1>
+                                <p className="text-sm text-muted-foreground">Manage and optimize your sharded knowledge cluster.</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                {publishedBlogs.map((blog) => (
+                                    <div key={blog.id} className="flex items-center gap-6 p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
+                                        <div className="relative h-16 w-16 rounded-2xl overflow-hidden flex-shrink-0 border border-white/5">
+                                            <Image src={blog.thumbnail_url} alt="" fill className="object-cover" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-base leading-tight group-hover:text-primary transition-colors truncate">{blog.title}</h3>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{blog.category}</span>
+                                                <div className="flex items-center gap-3 text-[9px] font-bold text-muted-foreground/20">
+                                                    <span className="flex items-center gap-1"><Eye className="h-2.5 w-2.5" /> {blog.view_count || 0}</span>
+                                                    <span className="flex items-center gap-1"><TrendingUp className="h-2.5 w-2.5" /> {blog.read_time}m</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEditBlog(blog)} className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary transition-all">
+                                                <Edit3 className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteBlog(blog.id, blog.title)} className="h-9 w-9 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-all">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {publishedBlogs.length === 0 && (
+                                    <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/20">Empty Repository</p>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </div>
+                            </div>
+                        </div>
+                    )}
 
-            {/* Image Cropper Modal */}
+
+                </div>
+            </main>
+
             {showCropper && (
                 <ImageCropper
                     image={imageToCrop}
                     onCropComplete={handleCropComplete}
-                    onCancel={handleCropCancel}
+                    onCancel={() => setShowCropper(false)}
                     aspectRatio={16 / 9}
                 />
             )}

@@ -110,6 +110,15 @@ export default function LoginPage() {
               {loading ? "Verifying..." : "Continue to Passkey →"}
             </Button>
           </form>
+
+          <div className="mt-6 pt-6 border-t border-muted text-center">
+            <p className="text-sm text-muted-foreground">
+              Want to share your expertise?{" "}
+              <a href="/" className="text-primary font-semibold hover:underline">
+                Apply to be a Writer
+              </a>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

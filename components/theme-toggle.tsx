@@ -18,16 +18,18 @@ export function ThemeToggle() {
     }
 
     return (
-        <button
+        <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="rounded-full w-12 h-12 md:w-14 md:h-14 flex items-center justify-center hover:bg-accent transition-colors"
+            className="rounded-full hover:bg-primary/10 w-12 h-12 md:w-14 md:h-14"
             aria-label="Toggle theme"
         >
             {theme === "dark" ? (
-                <Sun className="h-6 w-6 md:h-7 md:w-7" />
+                <Sun className="h-6 w-6 md:h-7 md:w-7 text-primary" />
             ) : (
-                <Moon className="h-6 w-6 md:h-7 md:w-7" />
+                <Moon className="h-6 w-6 md:h-7 md:w-7 text-primary" />
             )}
-        </button>
+        </Button>
     );
 }
