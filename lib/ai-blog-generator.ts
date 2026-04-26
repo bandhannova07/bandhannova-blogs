@@ -34,9 +34,10 @@ STRUCTURE & STYLE REFERENCE (Follow this "High-Level" standard):
 3. Use GitHub-style callouts for key information (NOTE, TIP, IMPORTANT, etc.).
 4. Include at least one complex code block if relevant, with comments in Bengali.
 5. Use --- (horizontal rules) between major sections.
-6. IMAGE STRATEGY: 
-   - Identify 2-3 locations where a high-quality image or technical diagram would enhance the blog.
-   - Use the placeholder format: \`[IMG-PLACEHOLDER: short_description]\` at those locations.
+6. IMAGE STRATEGY (CRITICAL): 
+   - Identify 3-4 locations where a high-fidelity image or technical diagram would enhance the blog.
+   - At each location, insert this exact special tag: \`[IMAGE_PROMPT: Provide a 4-5 line high-fidelity AI image generation prompt describing exactly what should be in the image, the style, lighting, and technical details.]\`
+   - Do NOT use standard markdown image tags. ONLY use the [IMAGE_PROMPT: ...] format.
 7. End with a strong Conclusion and a soft Call to Action.
 
 CATEGORY SELECTION:
@@ -47,14 +48,6 @@ At the very top of your response, before anything else, include this exact block
 ---
 Selected-Category: [Your Choice]
 ---
-
-IMAGE PROMPTS SECTION (MANDATORY):
-At the very end of your response, after the conclusion, provide a detailed section for the editor:
-# IMAGE_PROMPTS_START
-[IMG-1]: Provide a 3-5 line high-fidelity AI image generation prompt for the first placeholder.
-[IMG-2]: Provide a 3-5 line high-fidelity AI image generation prompt for the second placeholder.
-...and so on. If a DIAGRAM is needed, describe its exact name and detail in 5 lines.
-# IMAGE_PROMPTS_END
 
 Write the complete blog post in markdown format now:`;
 
@@ -140,23 +133,10 @@ export async function generateBlogMetadata(content: string) {
     const wordCount = content.split(/\s+/).length;
     const readTime = Math.ceil(wordCount / 200);
 
-    // Extract image prompts
-    const imagePrompts: { id: string; prompt: string }[] = [];
-    const promptSectionMatch = content.match(/# IMAGE_PROMPTS_START([\s\S]+?)# IMAGE_PROMPTS_END/);
-    if (promptSectionMatch) {
-        const promptLines = promptSectionMatch[1].trim().split('\n');
-        promptLines.forEach(line => {
-            const match = line.match(/\[(IMG-\d+)\]:\s*(.+)/);
-            if (match) {
-                imagePrompts.push({ id: match[1], prompt: match[2] });
-            }
-        });
-    }
-
     // Remove metadata blocks from the final content to avoid showing them to users
+    // We preserve [IMAGE_PROMPT: ...] tags as they will be handled by the editor UI
     const cleanContent = content
         .replace(/---[\s\S]+?Selected-Category:[\s\S]+?---/, '')
-        .replace(/# IMAGE_PROMPTS_START[\s\S]+?# IMAGE_PROMPTS_END/, '')
         .trim();
 
     return {
@@ -166,7 +146,6 @@ export async function generateBlogMetadata(content: string) {
         tags,
         readTime,
         category,
-        imagePrompts,
         cleanContent,
     };
 }

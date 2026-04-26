@@ -80,12 +80,40 @@ export default function AdminPage() {
     const [productForm, setProductForm] = useState({
         type: "affiliate",
         title: "",
-        thumbnail: "",
-        link: "",
-        video_url: "",
-        cta_text: "",
-        cta_link: ""
+        thumbnail: "", // Affiliate Image
+        link: "",      // Affiliate Link
+        video_url: "", // Brand Video
+        cta_text: "",  // Brand CTA Button Text
+        cta_link: ""   // Brand Redirection URL
     });
+    const [uploadingAsset, setUploadingAsset] = useState(false);
+
+    const handleAssetUpload = async (file: File, type: string) => {
+        setUploadingAsset(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("type", type === "video" ? "brand_video" : "product_image");
+
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (type === "video") {
+                    setProductForm(prev => ({ ...prev, video_url: data.url }));
+                } else {
+                    setProductForm(prev => ({ ...prev, thumbnail: data.url }));
+                }
+            }
+        } catch (error) {
+            console.error("Asset upload failed:", error);
+        } finally {
+            setUploadingAsset(false);
+        }
+    };
 
     // Section Layout Orchestrator States
     const [sectionLayouts, setSectionLayouts] = useState<any[]>([]);
@@ -142,6 +170,103 @@ export default function AdminPage() {
             console.error("Error fetching products:", error);
         } finally {
             setLoadingProducts(false);
+        }
+    };
+
+    // Image Prompt Uploader Component
+    const ImagePromptUploader = ({ prompt, onUpload }: { prompt: string, onUpload: (url: string) => void }) => {
+        const [copying, setCopying] = useState(false);
+        const [uploading, setUploading] = useState(false);
+
+        const handleCopy = async () => {
+            setCopying(true);
+            await navigator.clipboard.writeText(prompt);
+            setTimeout(() => setCopying(false), 2000);
+        };
+
+        const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            
+            setUploading(true);
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", "blog_image");
+
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    onUpload(data.url);
+                }
+            } catch (error) {
+                console.error("Image upload failed:", error);
+            } finally {
+                setUploading(false);
+            }
+        };
+
+        return (
+            <div className="my-10 p-8 rounded-[2.5rem] bg-white/[0.02] border border-dashed border-white/10 space-y-6 group/prompt hover:border-primary/30 transition-all">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                            <ImageIcon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Asset Generation Required</p>
+                            <p className="text-xs font-bold text-muted-foreground/40 mt-1">AI has recommended a visual placeholder here</p>
+                        </div>
+                    </div>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleCopy}
+                        className={cn(
+                            "h-10 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            copying ? "bg-emerald-500 text-white" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                        )}
+                    >
+                        {copying ? "Prompt Copied! ✨" : "Copy AI Prompt"}
+                    </Button>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-black/40 border border-white/5 relative">
+                    <p className="text-xs italic leading-relaxed text-muted-foreground/60 pr-10">"{prompt}"</p>
+                    <div className="absolute top-4 right-4">
+                        <Sparkles className="h-3.5 w-3.5 text-primary/20" />
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <label className="flex-1 h-14 rounded-2xl bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-all flex items-center justify-center cursor-pointer group/upload">
+                        <div className="flex items-center gap-3">
+                            {uploading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Upload className="h-4 w-4 text-primary/60 group-hover/upload:text-primary" />}
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 group-hover/upload:text-primary">
+                                {uploading ? "Uploading Asset..." : "Upload Generated Image"}
+                            </span>
+                        </div>
+                        <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
+                    </label>
+                </div>
+            </div>
+        );
+    };
+
+    const handleClearAllProducts = async () => {
+        if (!confirm("CRITICAL ACTION: Are you sure you want to permanently WIPE the entire product inventory? This cannot be undone.")) return;
+        try {
+            const response = await fetch("/api/products", { method: "DELETE" });
+            if (response.ok) {
+                fetchProducts();
+                alert("Inventory wiped successfully.");
+            }
+        } catch (error) {
+            console.error("Error clearing inventory:", error);
         }
     };
 
@@ -841,10 +966,31 @@ export default function AdminPage() {
                                                     placeholder="Blog content in markdown..."
                                                 />
                                             ) : (
-                                                <div 
-                                                    className="prose prose-invert prose-sm md:prose-base max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-p:text-muted-foreground/80 prose-strong:text-primary prose-blockquote:border-l-primary prose-blockquote:bg-white/5 prose-blockquote:rounded-r-2xl prose-blockquote:p-6 prose-img:rounded-[2rem] prose-img:border prose-img:border-white/10"
-                                                    dangerouslySetInnerHTML={{ __html: markdownToHtml(generatedBlog) }}
-                                                />
+                                                <div className="space-y-6">
+                                                    {generatedBlog.split(/(\[IMAGE_PROMPT:.*?\])/g).map((part, idx) => {
+                                                        if (part.startsWith('[IMAGE_PROMPT:')) {
+                                                            const prompt = part.match(/\[IMAGE_PROMPT:(.*?)\]/)?.[1] || "";
+                                                            return (
+                                                                <ImagePromptUploader 
+                                                                    key={idx}
+                                                                    prompt={prompt}
+                                                                    onUpload={(url) => {
+                                                                        const newContent = generatedBlog.replace(part, `![AI Generated Asset](${url})`);
+                                                                        setGeneratedBlog(newContent);
+                                                                    }}
+                                                                />
+                                                            );
+                                                        }
+                                                        if (!part.trim()) return null;
+                                                        return (
+                                                            <div 
+                                                                key={idx}
+                                                                className="prose prose-invert prose-sm md:prose-base max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-p:text-muted-foreground/80 prose-strong:text-primary prose-blockquote:border-l-primary prose-blockquote:bg-white/5 prose-blockquote:rounded-r-2xl prose-blockquote:p-6 prose-img:rounded-[2rem] prose-img:border prose-img:border-white/10"
+                                                                dangerouslySetInnerHTML={{ __html: markdownToHtml(part) }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
                                             )}
                                         </div>
                                         <div className="space-y-4">
@@ -866,240 +1012,316 @@ export default function AdminPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Section Orchestrator */}
-                                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-6">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/60">Section Orchestrator</h4>
-                                                        <div className="flex gap-1.5">
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
-                                                                onClick={() => setShowProductManager(!showProductManager)}
-                                                                className={cn(
-                                                                    "h-6 px-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
-                                                                    showProductManager ? "bg-primary text-white" : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                                                                )}
-                                                            >
-                                                                {showProductManager ? "Close" : "Manage Products"}
-                                                            </Button>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
-                                                                onClick={syncHeadings}
-                                                                className="h-6 px-3 rounded-lg text-[8px] font-black uppercase tracking-widest bg-white/5 text-muted-foreground hover:bg-white/10"
-                                                            >
-                                                                <RefreshCw className="h-2.5 w-2.5 mr-1" /> Sync Headings
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                    <Layout className="h-3.5 w-3.5 text-primary/40" />
+                                    </div>
+                                    </div>
+
+                                    {/* Section Orchestrator - Full Width Dedicated Layout */}
+                                    <div className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 space-y-10">
+                                        <div className="flex items-center justify-between border-b border-white/5 pb-8">
+                                            <div className="flex items-center gap-5">
+                                                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                                                    <Layout className="h-6 w-6 text-primary" />
                                                 </div>
+                                                <div>
+                                                    <h4 className="text-2xl font-black tracking-tighter">Section Orchestrator</h4>
+                                                    <p className="text-xs font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest">Architect monetization slots for each chapter</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    onClick={handleClearAllProducts}
+                                                    className="h-12 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500/40 hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" /> Wipe Inventory
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    onClick={() => setShowProductManager(!showProductManager)}
+                                                    className={cn(
+                                                        "h-12 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                        showProductManager ? "bg-primary text-white" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                                                    )}
+                                                >
+                                                    {showProductManager ? "Close Asset Manager" : "Manage Product Inventory"}
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    onClick={syncHeadings}
+                                                    className="h-12 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/5 text-muted-foreground hover:bg-white/10"
+                                                >
+                                                    <RefreshCw className="h-4 w-4 mr-2" /> Sync Headings
+                                                </Button>
+                                            </div>
+                                        </div>
 
-                                                {showProductManager && (
-                                                    <div className="space-y-6 p-6 rounded-2xl bg-white/[0.01] border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                        <div className="flex items-center justify-between">
-                                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Product Inventory</h5>
-                                                            <Badge variant="outline" className="text-[8px] font-black">{products.length} Items</Badge>
+                                        {showProductManager && (
+                                            <div className="space-y-8 p-10 rounded-[2.5rem] bg-black/40 border border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
+                                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                                                    {/* Asset Creation Form */}
+                                                    <div className="lg:col-span-1 space-y-6">
+                                                        <h5 className="text-xs font-black uppercase tracking-widest text-primary/60 border-b border-white/5 pb-4">Register New Asset</h5>
+                                                        <div className="space-y-4">
+                                                            <div className="space-y-2">
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Asset Type</label>
+                                                                <select 
+                                                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl p-4 text-xs font-bold text-white outline-none focus:ring-1 ring-primary/50"
+                                                                    value={productForm.type}
+                                                                    onChange={(e) => setProductForm({ ...productForm, type: e.target.value as any })}
+                                                                >
+                                                                    <option value="affiliate">Affiliate Link</option>
+                                                                    <option value="brand">Brand Advertisement</option>
+                                                                </select>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Item Title</label>
+                                                                <Input 
+                                                                    value={productForm.title}
+                                                                    onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
+                                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                                    placeholder="e.g., Ultimate Cloud Hosting"
+                                                                />
+                                                            </div>
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            {/* Mini Form */}
-                                                            <div className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/10">
-                                                                <div className="grid grid-cols-2 gap-2">
-                                                                    <div className="space-y-1">
-                                                                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Type</label>
-                                                                        <select 
-                                                                            className="w-full bg-black/40 border border-white/10 rounded-lg p-1.5 text-[10px] font-bold"
-                                                                            value={productForm.type}
-                                                                            onChange={(e) => setProductForm({ ...productForm, type: e.target.value as any })}
-                                                                        >
-                                                                            <option value="affiliate">Affiliate</option>
-                                                                            <option value="brand">Brand Ad</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Title</label>
+                                                        {productForm.type === 'affiliate' ? (
+                                                            <div className="space-y-4">
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Affiliate Link (Your Earning Source)</label>
+                                                                    <Input 
+                                                                        value={productForm.link}
+                                                                        onChange={(e) => setProductForm({ ...productForm, link: e.target.value })}
+                                                                        className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                                        placeholder="https://affiliate.link/your-id"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Image URL / Upload</label>
+                                                                    <div className="flex gap-2">
                                                                         <Input 
-                                                                            value={productForm.title}
-                                                                            onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
-                                                                            className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
+                                                                            value={productForm.thumbnail}
+                                                                            onChange={(e) => setProductForm({ ...productForm, thumbnail: e.target.value })}
+                                                                            className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl flex-1"
+                                                                            placeholder="https://image.url..."
+                                                                        />
+                                                                        <label className="h-12 w-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
+                                                                            {uploadingAsset ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
+                                                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleAssetUpload(e.target.files[0], "image")} />
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-4">
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Video URL / Cloudinary Upload</label>
+                                                                    <div className="flex gap-2">
+                                                                        <Input 
+                                                                            value={productForm.video_url}
+                                                                            onChange={(e) => setProductForm({ ...productForm, video_url: e.target.value })}
+                                                                            className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl flex-1"
+                                                                            placeholder="Direct video link or upload..."
+                                                                        />
+                                                                        <label className="h-12 w-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
+                                                                            {uploadingAsset ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Video className="h-4 w-4 text-muted-foreground" />}
+                                                                            <input type="file" className="hidden" accept="video/*" onChange={(e) => e.target.files?.[0] && handleAssetUpload(e.target.files[0], "video")} />
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <div className="space-y-2">
+                                                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">CTA Button Text</label>
+                                                                        <Input 
+                                                                            value={productForm.cta_text}
+                                                                            onChange={(e) => setProductForm({ ...productForm, cta_text: e.target.value })}
+                                                                            className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                                            placeholder="e.g., Learn More"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Brand URL (Redirection)</label>
+                                                                        <Input 
+                                                                            value={productForm.cta_link}
+                                                                            onChange={(e) => setProductForm({ ...productForm, cta_link: e.target.value })}
+                                                                            className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                                            placeholder="https://brand.com/target"
                                                                         />
                                                                     </div>
                                                                 </div>
-
-                                                                {productForm.type === 'affiliate' ? (
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        <div className="space-y-1">
-                                                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Link</label>
-                                                                            <Input 
-                                                                                value={productForm.link}
-                                                                                onChange={(e) => setProductForm({ ...productForm, link: e.target.value })}
-                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="space-y-1">
-                                                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Thumbnail</label>
-                                                                            <Input 
-                                                                                value={productForm.thumbnail}
-                                                                                onChange={(e) => setProductForm({ ...productForm, thumbnail: e.target.value })}
-                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="space-y-2">
-                                                                        <div className="space-y-1">
-                                                                            <label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Video URL</label>
-                                                                            <Input 
-                                                                                value={productForm.video_url}
-                                                                                onChange={(e) => setProductForm({ ...productForm, video_url: e.target.value })}
-                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="grid grid-cols-2 gap-2">
-                                                                            <Input 
-                                                                                placeholder="CTA Text"
-                                                                                value={productForm.cta_text}
-                                                                                onChange={(e) => setProductForm({ ...productForm, cta_text: e.target.value })}
-                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
-                                                                            />
-                                                                            <Input 
-                                                                                placeholder="CTA Link"
-                                                                                value={productForm.cta_link}
-                                                                                onChange={(e) => setProductForm({ ...productForm, cta_link: e.target.value })}
-                                                                                className="bg-black/40 border-white/10 h-8 text-[10px] rounded-lg"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                <div className="flex gap-2">
-                                                                    <Button onClick={handleUpsertProduct} className="flex-1 h-8 rounded-lg bg-primary text-[8px] font-black uppercase tracking-widest">
-                                                                        {editingProductId ? "Update" : "Save Product"}
-                                                                    </Button>
-                                                                    {editingProductId && (
-                                                                        <Button variant="ghost" onClick={() => { setEditingProductId(null); setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "" }); }} className="h-8 px-3 text-[8px] font-black uppercase tracking-widest">Cancel</Button>
-                                                                    )}
-                                                                </div>
                                                             </div>
+                                                        )}
 
-                                                            {/* Mini List */}
-                                                            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
-                                                                {products.map((p) => (
-                                                                    <div key={p.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between group">
-                                                                        <div className="flex items-center gap-3 min-w-0">
-                                                                            <div className="h-8 w-8 rounded-lg bg-white/5 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
-                                                                                {p.type === 'brand' ? <Video className="h-3 w-3 text-primary/40" /> : <ShoppingCart className="h-3 w-3 text-blue-500/40" />}
-                                                                                {p.thumbnail && <Image src={p.thumbnail} alt="" width={32} height={32} className="object-cover" />}
-                                                                            </div>
-                                                                            <div className="min-w-0">
-                                                                                <p className="text-[10px] font-bold truncate">{p.title}</p>
-                                                                                <Badge className="h-3 px-1 text-[6px] font-black uppercase tracking-widest bg-white/5 text-muted-foreground/60">{p.type}</Badge>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                            <button onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="p-1 hover:text-primary"><Edit3 className="h-3 w-3" /></button>
-                                                                            <button onClick={() => handleDeleteProduct(p.id)} className="p-1 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
+                                                        <div className="flex gap-3 pt-4">
+                                                            <Button 
+                                                                onClick={handleUpsertProduct} 
+                                                                disabled={uploadingAsset}
+                                                                className="flex-1 h-14 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+                                                            >
+                                                                {editingProductId ? "Update Asset" : "Register Asset"}
+                                                            </Button>
+                                                            {editingProductId && (
+                                                                <Button variant="ghost" onClick={() => { setEditingProductId(null); setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "" }); }} className="h-14 px-6 text-[10px] font-black uppercase tracking-widest">Cancel</Button>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                )}
-                                                
-                                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
-                                                    {sectionLayouts.map((section, idx) => (
-                                                        <div key={idx} className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <Badge variant="outline" className="text-[8px] font-black border-white/10 h-5">H2</Badge>
-                                                                <p className="text-[10px] font-bold truncate text-muted-foreground">{section.heading}</p>
+
+
+                                                    {/* Asset List */}
+                                                    <div className="lg:col-span-2 space-y-4">
+                                                        <h5 className="text-xs font-black uppercase tracking-widest text-muted-foreground/40 border-b border-white/5 pb-4">Available Inventory ({products.length})</h5>
+                                                        <div className="max-h-[500px] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 pr-4 scrollbar-thin scrollbar-thumb-white/10">
+                                                            {products.map((p) => (
+                                                                <div key={p.id} className="p-6 rounded-[1.5rem] bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:bg-white/[0.05] hover:border-white/10 transition-all">
+                                                                    <div className="flex items-center gap-5 min-w-0">
+                                                                        <div className="h-16 w-16 rounded-2xl bg-black/40 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5 relative shadow-inner">
+                                                                            {p.type === 'brand' ? <Video className="h-6 w-6 text-primary/40" /> : <ShoppingCart className="h-6 w-6 text-blue-500/40" />}
+                                                                            {p.thumbnail && <Image src={p.thumbnail} alt="" width={64} height={64} className="object-cover" />}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-sm font-bold truncate text-white">{p.title}</p>
+                                                                            <Badge className="h-4 px-2 text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border-none mt-2">{p.type}</Badge>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <Button variant="ghost" size="icon" onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="h-10 w-10 rounded-xl hover:bg-primary/20 hover:text-primary transition-all"><Edit3 className="h-4 w-4" /></Button>
+                                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="h-10 w-10 rounded-xl hover:bg-red-500/20 hover:text-red-500 transition-all"><Trash2 className="h-4 w-4" /></Button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {products.length === 0 && (
+                                                                <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                                                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">Inventory is Empty</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="grid grid-cols-1 gap-6">
+                                            {sectionLayouts.map((section, idx) => (
+                                                <div key={idx} className="p-10 rounded-[2.5rem] bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all group relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
+                                                    
+                                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                                                        {/* Section Heading Info */}
+                                                        <div className="lg:col-span-3 space-y-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <Badge variant="outline" className="text-[10px] font-black border-primary/40 text-primary bg-primary/5 h-9 px-5 rounded-xl">SECTION {idx + 1}</Badge>
+                                                                <div className="h-px flex-1 bg-white/5" />
                                                             </div>
-                                                            
-                                                            <div className="grid grid-cols-2 gap-3">
-                                                                {/* Left Slot */}
-                                                                <div className="space-y-2">
-                                                                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">Left Slot</p>
+                                                            <h5 className="text-xl font-black text-white/90 leading-tight pr-6">{section.heading}</h5>
+                                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Targeting H2 Chapter</p>
+                                                        </div>
+                                                        
+                                                        {/* Configuration Area */}
+                                                        <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-10">
+                                                            {/* Left Injection Slot */}
+                                                            <div className="p-8 rounded-3xl bg-black/40 border border-white/5 space-y-5 relative">
+                                                                <div className="flex items-center justify-between">
+                                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Left Sidebar Injection</p>
+                                                                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                                                </div>
+                                                                <div className="relative">
                                                                     <select 
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] font-bold outline-none focus:ring-1 ring-primary/30"
+                                                                        className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-5 text-sm font-bold text-white outline-none focus:ring-2 ring-primary/50 appearance-none cursor-pointer"
                                                                         value={section.left.type}
                                                                         onChange={(e) => updateSectionLayout(idx, 'left', e.target.value)}
                                                                     >
-                                                                        <option value="nothing">Nothing</option>
-                                                                        <option value="affiliate">Affiliate Link</option>
-                                                                        <option value="adsense">Adsense Card</option>
+                                                                        <option value="nothing">Disable Sidebar Placement</option>
+                                                                        <option value="affiliate">Affiliate Link Card</option>
                                                                     </select>
-                                                                    
-                                                                    {section.left.type === 'affiliate' && (
+                                                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                        <Layout className="h-4 w-4 text-muted-foreground/40" />
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {section.left.type === 'affiliate' && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
                                                                         <select 
-                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg p-2 text-[10px] font-bold outline-none mt-2"
+                                                                            className="w-full bg-primary/10 border border-primary/40 rounded-2xl p-5 text-sm font-black text-primary outline-none mt-3 appearance-none cursor-pointer"
                                                                             onChange={(e) => {
                                                                                 const item = products.find(p => p.title === e.target.value);
                                                                                 updateSectionLayout(idx, 'left', 'affiliate', { affiliate: item });
                                                                             }}
                                                                             value={section.left.affiliate?.title || ""}
                                                                         >
-                                                                            <option value="" disabled>Select Item</option>
-                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title}>{a.title}</option>)}
+                                                                            <option value="" disabled>Link Inventory Item</option>
+                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title} className="bg-black text-white">{a.title}</option>)}
                                                                         </select>
-                                                                    )}
-                                                                </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                                {/* Right Slot */}
-                                                                <div className="space-y-2">
-                                                                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">Right Slot</p>
+                                                            {/* Right Injection Slot */}
+                                                            <div className="p-8 rounded-3xl bg-black/40 border border-white/5 space-y-5 relative">
+                                                                <div className="flex items-center justify-between">
+                                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Right Sidebar Injection</p>
+                                                                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                                                                </div>
+                                                                <div className="relative">
                                                                     <select 
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-[10px] font-bold outline-none focus:ring-1 ring-primary/30"
+                                                                        className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-5 text-sm font-bold text-white outline-none focus:ring-2 ring-primary/50 appearance-none cursor-pointer"
                                                                         value={section.right.type}
                                                                         onChange={(e) => updateSectionLayout(idx, 'right', e.target.value)}
                                                                     >
-                                                                        <option value="nothing">Nothing</option>
-                                                                        <option value="brand_ad">Brand Video Ad</option>
-                                                                        <option value="affiliate">Affiliate Link</option>
-                                                                        <option value="adsense">Adsense Card</option>
+                                                                        <option value="nothing">Disable Sidebar Placement</option>
+                                                                        <option value="brand_ad">Brand Video Asset</option>
+                                                                        <option value="affiliate">Affiliate Link Card</option>
                                                                     </select>
+                                                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                        <Video className="h-4 w-4 text-muted-foreground/40" />
+                                                                    </div>
+                                                                </div>
 
-                                                                    {section.right.type === 'brand_ad' && (
+                                                                {section.right.type === 'brand_ad' && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
                                                                         <select 
-                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg p-2 text-[10px] font-bold outline-none mt-2"
+                                                                            className="w-full bg-primary/10 border border-primary/40 rounded-2xl p-5 text-sm font-black text-primary outline-none mt-3 appearance-none cursor-pointer"
                                                                             onChange={(e) => {
                                                                                 const item = products.find(p => p.title === e.target.value);
                                                                                 updateSectionLayout(idx, 'right', 'brand_ad', { brand_ad: item });
                                                                             }}
                                                                             value={section.right.brand_ad?.title || ""}
                                                                         >
-                                                                            <option value="" disabled>Select Ad</option>
-                                                                            {products.filter(p => p.type === 'brand').map(a => <option key={a.id} value={a.title}>{a.title}</option>)}
+                                                                            <option value="" disabled>Link Brand Video</option>
+                                                                            {products.filter(p => p.type === 'brand').map(a => <option key={a.id} value={a.title} className="bg-black text-white">{a.title}</option>)}
                                                                         </select>
-                                                                    )}
+                                                                    </div>
+                                                                )}
 
-                                                                    {section.right.type === 'affiliate' && (
+                                                                {section.right.type === 'affiliate' && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
                                                                         <select 
-                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg p-2 text-[10px] font-bold outline-none mt-2"
+                                                                            className="w-full bg-primary/10 border border-primary/40 rounded-2xl p-5 text-sm font-black text-primary outline-none mt-3 appearance-none cursor-pointer"
                                                                             onChange={(e) => {
                                                                                 const item = products.find(p => p.title === e.target.value);
                                                                                 updateSectionLayout(idx, 'right', 'affiliate', { affiliate: item });
                                                                             }}
                                                                             value={section.right.affiliate?.title || ""}
                                                                         >
-                                                                            <option value="" disabled>Select Item</option>
-                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title}>{a.title}</option>)}
+                                                                            <option value="" disabled>Link Inventory Item</option>
+                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title} className="bg-black text-white">{a.title}</option>)}
                                                                         </select>
-                                                                    )}
-                                                                </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                                <div className="pt-2">
-                                                    <div className="flex items-start gap-3 p-3 rounded-2xl bg-primary/5 border border-primary/10">
-                                                        <Info className="h-3.5 w-3.5 text-primary mt-0.5" />
-                                                        <p className="text-[9px] text-muted-foreground/60 leading-relaxed font-medium">
-                                                            Orchestrate sidebars for each section. Affiliate links and brand ads will be injected alongside the corresponding heading.
-                                                        </p>
                                                     </div>
                                                 </div>
+                                            ))}
+                                        </div>
+                                        
+                                        <div className="pt-10">
+                                            <div className="flex items-center gap-6 p-8 rounded-[2.5rem] bg-primary/5 border border-primary/10">
+                                                <div className="p-4 rounded-2xl bg-primary/10">
+                                                    <Info className="h-6 w-6 text-primary" />
+                                                </div>
+                                                <p className="text-sm text-muted-foreground/60 leading-relaxed font-bold">
+                                                    The Section Orchestrator allows you to surgically inject monetization components alongside specific blog chapters. 
+                                                    The left and right sidebars will dynamically render these assets for a highly conversion-optimized reading experience.
+                                                </p>
                                             </div>
                                         </div>
                                     </div>

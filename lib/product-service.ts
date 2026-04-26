@@ -59,3 +59,8 @@ export async function upsertProduct(product: Partial<Product>): Promise<Product>
 export async function deleteProduct(id: string): Promise<void> {
     await executeQuery('DELETE FROM products WHERE id = ?', [id]);
 }
+
+// Clear all products
+export async function clearAllProducts(): Promise<void> {
+    await executeQuery('DELETE FROM products');
+}

@@ -41,6 +41,16 @@
   animation: fadeIn 0.4s ease-out forwards;
 }
 
+/* Shimmer Animation for Loaders */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
 /* Grid Pattern Background */
 .bg-grid-pattern {
   background-image:
