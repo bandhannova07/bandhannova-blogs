@@ -57,13 +57,8 @@ export default function Home() {
     if (sortBy === "popular") {
       filtered.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
     } else {
-      // Shuffle for variety on every reload
-      const shuffled = [...filtered];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
+      // Sort by published_at DESC (most recent first)
+      filtered.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
     }
 
     return filtered;

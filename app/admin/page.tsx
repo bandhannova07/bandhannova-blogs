@@ -734,6 +734,57 @@ export default function AdminPage() {
                                             />
                                         </div>
 
+                                        {/* Author Details */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Author Name</label>
+                                                <Input
+                                                    placeholder="e.g., John Doe"
+                                                    value={authorName}
+                                                    onChange={(e) => setAuthorName(e.target.value)}
+                                                    className="bg-white/5 border-white/10 h-14 text-sm font-bold rounded-2xl focus:ring-1 ring-primary/30"
+                                                    disabled={generating}
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Author Avatar</label>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-14 w-14 rounded-2xl overflow-hidden border border-white/10 flex-shrink-0 bg-white/5 relative">
+                                                        {authorAvatarPreview ? (
+                                                            <Image src={authorAvatarPreview} alt="Avatar" width={56} height={56} className="object-cover h-full w-full" />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center text-muted-foreground/30">
+                                                                <ImageIcon className="h-6 w-6" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <label className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center cursor-pointer">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Upload Avatar</span>
+                                                        <input 
+                                                            type="file" 
+                                                            className="hidden" 
+                                                            accept="image/*" 
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    const formData = new FormData();
+                                                                    formData.append("file", file);
+                                                                    const response = await fetch("/api/blogs/upload-thumbnail", {
+                                                                        method: "POST",
+                                                                        body: formData,
+                                                                    });
+                                                                    if (response.ok) {
+                                                                        const { url } = await response.json();
+                                                                        setAuthorAvatarPreview(url);
+                                                                    }
+                                                                }
+                                                            }} 
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between ml-1">
                                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Context Sources (Multi-Scrape)</label>
