@@ -23,14 +23,14 @@ export function BlogCard({ post }: BlogCardProps) {
     return (
         <Card
             onClick={handleClick}
-            className="group relative h-full overflow-hidden border-0 cursor-pointer glass-card bg-white/50 dark:bg-black/40 backdrop-blur-md transition-all duration-300 rounded-[2rem] shadow-xl hover:-translate-y-2"
+            className="group relative h-full overflow-hidden border-0 cursor-pointer glass-card bg-background/50 backdrop-blur-md transition-all duration-300 rounded-[2rem] shadow-xl hover:-translate-y-2"
         >
             <CardHeader className="p-0 relative overflow-hidden h-48 md:h-56">
                 <Image
                     src={post.thumbnail_url}
                     alt={post.title}
                     fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="object-cover transition-transform duration-[5000ms] ease-in-out group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-60" />
 
@@ -54,11 +54,11 @@ export function BlogCard({ post }: BlogCardProps) {
                     </span>
                 </div>
 
-                <h3 className="text-lg md:text-xl font-black leading-tight tracking-tight group-hover:text-primary transition-colors duration-300 line-clamp-2">
+                <h3 className="text-lg md:text-xl font-black leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2">
                     {post.title}
                 </h3>
 
-                <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 font-medium opacity-80 leading-relaxed">
+                <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 font-medium leading-relaxed transition-colors duration-300">
                     {post.excerpt}
                 </p>
             </CardContent>

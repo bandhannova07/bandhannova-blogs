@@ -109,18 +109,84 @@ export function SectionedBlogContent({ contentHtml, sectionLayouts = [] }: Secti
                         </div>
 
                         {/* CENTER: Blog Section Content */}
-                        <div
-                            className="prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-none dark:prose-invert
-                            prose-headings:font-black prose-headings:tracking-tighter prose-headings:text-foreground
-                            prose-p:text-base md:prose-p:text-xl prose-p:leading-[1.8] prose-p:font-medium prose-p:text-foreground/80
-                            prose-strong:text-primary prose-strong:font-black
-                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                            prose-img:rounded-3xl md:prose-img:rounded-[2rem] prose-img:shadow-2xl prose-img:border prose-img:border-white/10
-                            prose-code:text-primary prose-code:bg-primary/5 prose-code:px-2 prose-code:py-1 prose-code:rounded-lg
-                            prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:p-6 md:prose-blockquote:p-8 prose-blockquote:rounded-r-2xl md:prose-blockquote:rounded-r-[2rem]
-                            "
-                            dangerouslySetInnerHTML={{ __html: sectionHtml }}
-                        />
+                        <div className="space-y-8">
+                            <div
+                                className="prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-none dark:prose-invert
+                                prose-headings:font-black prose-headings:tracking-tighter prose-headings:text-foreground
+                                prose-p:text-base md:prose-p:text-xl prose-p:leading-[1.8] prose-p:font-medium prose-p:text-foreground/80
+                                prose-strong:text-primary prose-strong:font-black 
+                                prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                                prose-img:rounded-3xl md:prose-img:rounded-[2rem] prose-img:shadow-2xl prose-img:border prose-img:border-white/10
+                                prose-code:text-primary prose-code:bg-primary/5 prose-code:px-2 prose-code:py-1 prose-code:rounded-lg
+                                prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:p-6 md:prose-blockquote:p-8 prose-blockquote:rounded-r-2xl md:prose-blockquote:rounded-r-[2rem] prose-blockquote:text-foreground/90
+                                "
+                                dangerouslySetInnerHTML={{ __html: sectionHtml }}
+                            />
+
+                            {/* Mobile Monetization Slot (Injected between sections) */}
+                            <div className="lg:hidden space-y-6 pt-4">
+                                {index === 0 ? (
+                                    /* Intro Mobile — subtle CTA */
+                                    <div className="glass rounded-2xl p-6 border-white/10 bg-primary/5 flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                            <ExternalLink className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Intelligence Hub</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Scroll down for deep insights and featured assets.</p>
+                                        </div>
+                                    </div>
+                                ) : layout && (layout.left.type !== "nothing" || layout.right.type !== "nothing") ? (
+                                    <div className="space-y-6">
+                                        {/* Mobile Affiliate/AdSense Slot */}
+                                        {layout.left.type === "affiliate" && layout.left.affiliate && (
+                                            <div className="glass p-5 rounded-[2rem] border-white/10 bg-background/40">
+                                                <div className="flex gap-4">
+                                                    <div className="relative h-24 w-24 rounded-xl overflow-hidden shrink-0 border border-white/5">
+                                                        <Image src={layout.left.affiliate.thumbnail} alt={layout.left.affiliate.title} fill className="object-cover" />
+                                                    </div>
+                                                    <div className="flex flex-col justify-between py-1">
+                                                        <h4 className="text-xs font-black leading-tight line-clamp-2">{layout.left.affiliate.title}</h4>
+                                                        <a href={layout.left.affiliate.link} target="_blank" rel="noopener noreferrer">
+                                                            <Button size="sm" className="h-8 rounded-lg font-black uppercase tracking-widest text-[8px] gap-2">
+                                                                <ShoppingCart className="w-3 h-3" />
+                                                                View
+                                                            </Button>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {layout.left.type === "adsense" && <GoogleAdCard />}
+
+                                        {/* Mobile Brand Ad Slot */}
+                                        {layout.right.type === "brand_ad" && layout.right.brand_ad && (
+                                            <div className="glass p-1 rounded-[2rem] border-white/10 overflow-hidden bg-background/40">
+                                                <div className="relative aspect-video w-full rounded-[1.8rem] overflow-hidden">
+                                                    <video 
+                                                        src={layout.right.brand_ad.video_url} 
+                                                        autoPlay loop muted playsInline 
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                                                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                                                        <div>
+                                                            <Badge className="bg-white/20 backdrop-blur-md text-[7px] font-black uppercase tracking-widest mb-1">Sponsored</Badge>
+                                                            <h4 className="text-white text-xs font-black">{layout.right.brand_ad.title}</h4>
+                                                        </div>
+                                                        <a href={layout.right.brand_ad.cta_link} target="_blank" rel="noopener noreferrer">
+                                                            <Button size="sm" className="h-8 rounded-lg font-black uppercase tracking-widest text-[8px] bg-primary text-white border-none">
+                                                                {layout.right.brand_ad.cta_text}
+                                                            </Button>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
 
                         {/* RIGHT SIDEBAR Slot */}
                         <div className="hidden lg:block relative">

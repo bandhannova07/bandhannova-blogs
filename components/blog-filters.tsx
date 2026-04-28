@@ -37,7 +37,7 @@ export function BlogFilters({
                             placeholder="Search intelligence..."
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            className="pl-14 md:pl-16 pr-6 md:pr-8 py-6 md:py-8 text-base md:text-xl rounded-2xl md:rounded-[2rem] glass border-white/20 dark:border-white/5 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all shadow-xl md:shadow-2xl bg-white/40 dark:bg-black/20 backdrop-blur-2xl w-full"
+                            className="pl-14 md:pl-16 pr-6 md:pr-8 py-4 md:py-8 text-base md:text-xl rounded-2xl md:rounded-[2rem] glass border-white/20 dark:border-white/5 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all shadow-xl md:shadow-2xl bg-background/40 backdrop-blur-2xl w-full"
                         />
                     </div>
                 </div>
@@ -85,29 +85,34 @@ export function BlogFilters({
                 </div>
             </div>
 
-            {/* Premium Category Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
-                <AnimatePresence mode="popLayout">
-                    {categories.map((category, idx) => (
-                        <motion.button
-                            key={category}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ 
-                                delay: idx * 0.05,
-                                duration: 0.4,
-                                ease: [0.16, 1, 0.3, 1]
-                            }}
-                            onClick={() => onCategoryChange(category)}
-                            className={cn(
-                                "category-pill px-5 md:px-8 py-2 md:py-3 rounded-full text-[9px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em]",
-                                selectedCategory === category ? "active" : "text-muted-foreground/60"
-                            )}
-                        >
-                            {category}
-                        </motion.button>
-                    ))}
-                </AnimatePresence>
+            {/* Premium Category Pills - Horizontally scrollable on mobile */}
+            <div className="relative w-full overflow-hidden">
+                <div className="flex items-center lg:justify-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-4 -mb-4 px-4 sm:px-0 snap-x">
+                    <AnimatePresence mode="popLayout">
+                        {categories.map((category, idx) => (
+                            <motion.button
+                                key={category}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ 
+                                    delay: idx * 0.05,
+                                    duration: 0.4,
+                                    ease: [0.16, 1, 0.3, 1]
+                                }}
+                                onClick={() => onCategoryChange(category)}
+                                className={cn(
+                                    "category-pill px-5 md:px-8 py-2 md:py-3 rounded-full text-[9px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em] whitespace-nowrap snap-center shrink-0",
+                                    selectedCategory === category ? "active" : "text-muted-foreground/60"
+                                )}
+                            >
+                                {category}
+                            </motion.button>
+                        ))}
+                    </AnimatePresence>
+                </div>
+                {/* Subtle fade edges for mobile scroll indicator */}
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent lg:hidden pointer-events-none opacity-50" />
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent lg:hidden pointer-events-none opacity-50" />
             </div>
         </div>
     );

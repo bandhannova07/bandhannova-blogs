@@ -37,6 +37,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { MobileNav } from "@/components/mobile-nav";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -77,6 +79,14 @@ export default function RootLayout({
         />
         {/* Highlight.js Theme */}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+
+        {/* Google AdSense - Required for Verification & Approval */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5594526034906457"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
 
         {/* Global Copy Script */}
         <Script id="copy-helper" strategy="afterInteractive">
@@ -120,14 +130,13 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem={true}
-          disableTransitionOnChange
         >
           {children}
+          <MobileNav />
           <Analytics />
         </ThemeProvider>
       </body>
     </html>
   );
 }
-
 

@@ -57,10 +57,10 @@ marked.use({
                 };
 
                 return `
-                <div class="premium-callout callout-${type.toLowerCase()} my-12 p-8 rounded-[2rem] border-l-8 transition-all duration-500 hover:scale-[1.01] bg-white/5 dark:bg-white/5 backdrop-blur-xl border-white/10 shadow-lg relative overflow-hidden group">
+                <div class="premium-callout callout-${type.toLowerCase()} my-12 p-8 rounded-[2rem] border-l-8 transition-all duration-500 hover:scale-[1.01] backdrop-blur-xl border-white/10 shadow-lg relative overflow-hidden group" style="background-color: rgba(0, 0, 0, 0.06);">
                     <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                     <div class="flex items-start gap-6 relative z-10">
-                        <div class="callout-icon-container p-3 rounded-2xl bg-white/5 border border-white/10 shadow-inner">
+                        <div class="callout-icon-container p-3 rounded-2xl border border-white/10 shadow-inner" style="background-color: rgba(255, 255, 255, 0.6);">
                             ${icons[type] || ''}
                         </div>
                         <div class="callout-content flex-1">
@@ -72,7 +72,7 @@ marked.use({
                 `;
             }
 
-            return `<blockquote class="border-l-4 border-primary/30 pl-6 my-8 italic text-muted-foreground/90 bg-primary/5 py-4 rounded-r-xl">${text}</blockquote>`;
+            return `<blockquote class="border-l-4 border-primary/30 pl-6 my-8 italic py-4 rounded-r-xl transition-colors duration-300" style="color: var(--foreground); opacity: 0.9; background-color: rgba(32, 149, 243, 0.05);">${text}</blockquote>`;
         },
 
         // Custom Link Renderer for "High Level" look
@@ -86,12 +86,15 @@ marked.use({
         // Custom Image Renderer for auto-captioning and glassmorphism
         image({ href, title, text }) {
             return `
-            <figure class="my-12 overflow-hidden rounded-3xl border border-white/10 shadow-2xl group">
-                <div class="relative overflow-hidden">
+            <figure class="my-4 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl group">
+                <div class="relative overflow-hidden bg-background/50">
                     <img src="${href}" alt="${text}" title="${title || ''}" class="w-full h-auto transition-transform duration-700 group-hover:scale-105" loading="lazy" />
                     <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 drop-shadow-lg"><path d="m21 21-6-6m6 6v-4.5m0 4.5h-4.5"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </div>
                 </div>
-                ${text ? `<figcaption class="p-6 text-center text-sm font-medium text-muted-foreground italic bg-background/80 backdrop-blur-md border-t border-white/5 uppercase tracking-wide">
+                ${text ? `<figcaption class="p-6 text-center text-sm font-medium italic backdrop-blur-md border-t border-white/5 uppercase tracking-wide transition-colors duration-300" style="color: var(--foreground); opacity: 0.7; background-color: rgba(0, 0, 0, 0.03);">
                     ${text}
                 </figcaption>` : ''}
             </figure>

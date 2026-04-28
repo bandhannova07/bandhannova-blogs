@@ -125,14 +125,14 @@ export function BlogHero() {
 
                     {/* Heading */}
                     <div className="space-y-4 md:space-y-8 max-w-5xl mx-auto">
-                        <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.2] md:leading-[1.1] flex flex-wrap justify-center gap-x-2 md:gap-x-4 text-[var(--hero-text)]">
+                        <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.2] md:leading-[1.1] flex flex-wrap justify-center gap-x-2 md:gap-x-4 text-[var(--hero-text)] transition-colors duration-300">
                             {titleWords.map((word, i) => (
                                 <motion.span
                                     key={i}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.4, delay: i * 0.05 }}
-                                    className={word === "Digital" || word === "Intelligence" ? "text-gradient" : "text-[var(--hero-text)]"}
+                                    className={word === "Digital" || word === "Intelligence" ? "text-gradient" : "text-[var(--hero-text)] transition-colors duration-300"}
                                 >
                                     {word}
                                 </motion.span>

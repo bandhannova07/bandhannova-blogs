@@ -16,6 +16,7 @@ import { BrandAdWidget } from "@/components/widgets/brand-ad-widget";
 import { Footer } from "@/components/footer";
 import { DEMO_BLOG_DATA } from "@/lib/demo-data";
 import { MOCK_BLOG_DATA } from "@/lib/data";
+import { BlogPostHeader } from "@/components/blog-post-header";
 import type { Blog } from "@/lib/blog-service";
 
 interface BlogPostPageProps {
@@ -102,39 +103,23 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             <ReadProgressBar />
 
             {/* Back Navigation */}
-            <div className="sticky top-0 z-50 glass border-b border-white/10 backdrop-blur-2xl">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <Link href="/#blogs">
-                        <Button variant="ghost" className="gap-2 md:gap-3 font-black uppercase tracking-widest text-[10px] md:text-xs hover:bg-primary/10 hover:text-primary transition-all rounded-full px-4 md:px-6">
-                            <ArrowLeft className="h-4 w-4" />
-                            <span className="hidden sm:inline">Back to Knowledge Hub</span>
-                            <span className="sm:hidden">Back</span>
-                        </Button>
-                    </Link>
-                    <div className="flex items-center gap-2 md:gap-4">
-                        <ThemeToggle />
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/10 w-12 h-12 md:w-14 md:h-14">
-                            <Share2 className="h-6 w-6 md:h-7 md:w-7 text-primary" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            <BlogPostHeader />
 
             {/* Article Hero Section */}
-            <div className="max-w-[1800px] mx-auto px-6 pt-8 pb-16">
-                <header className="relative w-full rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 aspect-[21/9] md:aspect-video lg:aspect-[21/9] group">
+            <div className="max-w-[1800px] mx-auto px-4 md:px-6 pt-4 md:pt-8 pb-12 md:pb-16">
+                <header className="relative w-full rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 aspect-video md:aspect-[21/9] group">
                     {/* Main Image */}
                     <Image
                         src={post.thumbnail_url}
                         alt={post.title}
                         fill
-                        className="object-cover transition-transform duration-[2000ms] group-hover:scale-105"
+                        className="object-cover transition-transform duration-[5000ms] ease-in-out group-hover:scale-110"
                         priority
                     />
 
                     {/* Overlays */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent hidden md:block" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent hidden md:block transition-opacity duration-300" />
 
                     {/* Hero Content */}
                     <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-16 lg:p-24 space-y-6 md:space-y-8">
@@ -149,11 +134,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                                 </div>
                             </div>
 
-                            <h1 className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1] text-white animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100 fill-mode-both">
+                            <h1 className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1] text-white animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100 fill-mode-both" style={{ transition: 'color 0.3s ease' }}>
                                 {post.title}
                             </h1>
 
-                            <p className="text-sm md:text-lg lg:text-xl text-white/70 font-medium leading-relaxed max-w-3xl line-clamp-3 md:line-clamp-none animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200 fill-mode-both">
+                            <p className="text-sm md:text-lg lg:text-xl text-white/70 font-medium leading-relaxed max-w-3xl line-clamp-3 md:line-clamp-none animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200 fill-mode-both" style={{ transition: 'color 0.3s ease' }}>
                                 {post.excerpt}
                             </p>
 

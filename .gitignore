@@ -43,3 +43,7 @@ conversation-id.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary scratch files
+scratch/
+*.pdf

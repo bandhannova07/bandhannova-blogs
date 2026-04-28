@@ -23,12 +23,23 @@
   --foreground: hsl(0 0% 5%);
   --background: hsl(0 0% 100%);
   --hero-text: #1a1819;
+  --muted-foreground: hsl(0 0% 40%);
+}
+
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dark {
   --foreground: hsl(0 0% 98%);
   --background: hsl(0 0% 5%);
   --hero-text: #fafdff;
+  --muted-foreground: hsl(0 0% 65%);
+}
+
+/* Ensure hero text transitions smoothly */
+.text-\[var\(--hero-text\)\] {
+  transition: color 0.3s ease;
 }
 
 /* Optimized Animations */
@@ -71,6 +82,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .dark .glass {
@@ -81,7 +93,7 @@
 }
 
 .glass-card {
-  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -110,6 +122,11 @@ body {
   font-family: var(--font-outfit), sans-serif;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 .text-gradient {
@@ -126,8 +143,13 @@ body {
 .premium-callout.callout-warning { border-left-color: #f59e0b; }
 .premium-callout.callout-caution { border-left-color: #ef4444; }
 
+.premium-callout {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
 .premium-callout .callout-label {
   font-family: var(--font-outfit), sans-serif;
+  transition: color 0.3s ease;
 }
 
 .premium-callout.callout-note .callout-label { color: #3b82f6; }
@@ -135,6 +157,14 @@ body {
 .premium-callout.callout-important .callout-label { color: #8b5cf6; }
 .premium-callout.callout-warning .callout-label { color: #f59e0b; }
 .premium-callout.callout-caution .callout-label { color: #ef4444; }
+
+.premium-callout .callout-body {
+  transition: color 0.3s ease;
+}
+
+.premium-callout .callout-icon-container {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -147,6 +177,8 @@ body {
 /* --- Premium Typography & Blog Content --- */
 .prose {
   max-width: 100%;
+  color: var(--foreground);
+  transition: color 0.3s ease;
 }
 
 .prose h2 {
@@ -155,7 +187,8 @@ body {
   font-weight: 900;
   letter-spacing: -0.05em;
   line-height: 1.1;
-  color: inherit;
+  color: var(--foreground) !important;
+  transition: color 0.3s ease;
 }
 
 .prose h3 {
@@ -163,13 +196,35 @@ body {
   margin-bottom: 1.8rem !important;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: inherit;
+  color: var(--foreground) !important;
+  transition: color 0.3s ease;
+}
+
+.prose h1 {
+  color: var(--foreground) !important;
+  transition: color 0.3s ease;
 }
 
 .prose p {
   margin-bottom: 1.8rem;
   line-height: 1.9;
   opacity: 0.85;
+  color: inherit;
+  transition: color 0.3s ease;
+}
+
+.prose li {
+  color: inherit;
+  transition: color 0.3s ease;
+}
+
+.prose ul,
+.prose ol {
+  color: inherit;
+}
+
+.prose blockquote {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Code Block Styling */
@@ -251,4 +306,15 @@ body {
   background: rgba(32, 149, 243, 0.1);
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Global transition for theme-dependent colors */
+.text-muted-foreground,
+.text-foreground {
+  transition: color 0.3s ease;
+}
+
+/* Ensure all common elements transition smoothly */
+a, span, p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, code {
+  transition: color 0.3s ease, background-color 0.3s ease;
 }

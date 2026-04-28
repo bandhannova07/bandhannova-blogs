@@ -54,7 +54,7 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({
             viewport={{ once: true }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-            <Card className="w-full max-w-md overflow-hidden transition-all duration-500 glass-card bg-white/40 dark:bg-black/20 backdrop-blur-3xl border-white/20 dark:border-white/5 rounded-[2.5rem] shadow-2xl group">
+            <Card className="w-full max-w-md overflow-hidden transition-all duration-500 glass-card bg-background/40 backdrop-blur-3xl border-white/20 dark:border-white/5 rounded-[2.5rem] shadow-2xl group">
                 {image && (
                     <div className="relative h-56 w-full overflow-hidden">
                         <img
