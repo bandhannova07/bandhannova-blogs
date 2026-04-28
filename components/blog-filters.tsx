@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import { Search, Sparkles, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { categories } from "@/lib/blog-data";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import type { Blog } from "@/lib/blog-service";
 
 interface BlogFiltersProps {
     selectedCategory: string;
@@ -13,6 +15,7 @@ interface BlogFiltersProps {
     onSearchChange: (query: string) => void;
     sortBy: string;
     onSortChange: (sort: string) => void;
+    posts?: Blog[];
 }
 
 export function BlogFilters({
@@ -22,7 +25,35 @@ export function BlogFilters({
     onSearchChange,
     sortBy,
     onSortChange,
+    posts = [],
 }: BlogFiltersProps) {
+    // Calculate counts
+    const categoryCounts = useMemo(() => {
+        const counts: Record<string, number> = { All: posts.length };
+        posts.forEach((post) => {
+            counts[post.category] = (counts[post.category] || 0) + 1;
+        });
+        return counts;
+    }, [posts]);
+
+    // Filter and sort categories
+    const activeCategories = useMemo(() => {
+        if (!posts || posts.length === 0) return [...categories];
+
+        // Filter categories that have blogs
+        const usedCategories = categories.filter(
+            (cat) => cat === "All" || (categoryCounts[cat] || 0) > 0
+        );
+
+        // Sort by count (most first), keeping "All" at index 0
+        return [
+            "All",
+            ...usedCategories
+                .filter((c) => c !== "All")
+                .sort((a, b) => (categoryCounts[b] || 0) - (categoryCounts[a] || 0)),
+        ];
+    }, [categoryCounts, posts]);
+
     return (
         <div className="space-y-12 max-w-6xl mx-auto py-12">
             {/* Search & Sort Section */}
@@ -89,7 +120,7 @@ export function BlogFilters({
             <div className="relative w-full overflow-hidden">
                 <div className="flex items-center lg:justify-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-4 -mb-4 px-4 sm:px-0 snap-x">
                     <AnimatePresence mode="popLayout">
-                        {categories.map((category, idx) => (
+                        {activeCategories.map((category, idx) => (
                             <motion.button
                                 key={category}
                                 initial={{ opacity: 0, y: 10 }}
@@ -101,11 +132,21 @@ export function BlogFilters({
                                 }}
                                 onClick={() => onCategoryChange(category)}
                                 className={cn(
-                                    "category-pill px-5 md:px-8 py-2 md:py-3 rounded-full text-[9px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em] whitespace-nowrap snap-center shrink-0",
+                                    "category-pill px-5 md:px-8 py-2 md:py-3 rounded-full text-[9px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.2em] whitespace-nowrap snap-center shrink-0 flex items-center gap-2",
                                     selectedCategory === category ? "active" : "text-muted-foreground/60"
                                 )}
                             >
-                                {category}
+                                <span>{category}</span>
+                                {categoryCounts[category] !== undefined && (
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded-full text-[8px] font-bold transition-colors duration-300",
+                                        selectedCategory === category 
+                                            ? "bg-white/20 text-white" 
+                                            : "bg-primary/10 text-primary border border-primary/20"
+                                    )}>
+                                        {categoryCounts[category]}
+                                    </span>
+                                )}
                             </motion.button>
                         ))}
                     </AnimatePresence>

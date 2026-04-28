@@ -84,6 +84,7 @@ export default function Home() {
             onSearchChange={setSearchQuery}
             sortBy={sortBy}
             onSortChange={setSortBy}
+            posts={blogs}
           />
 
           <BlogGrid posts={filteredPosts} loading={loading} />
