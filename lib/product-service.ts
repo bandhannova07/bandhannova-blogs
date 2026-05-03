@@ -4,13 +4,15 @@ import { setCache, getCache, deleteCache } from './redis';
 // Product Interface
 export interface Product {
     id: string;
-    type: 'affiliate' | 'brand';
+    type: 'affiliate' | 'brand' | 'adsense';
     title: string;
     thumbnail?: string;
     link?: string;
     video_url?: string;
     cta_text?: string;
     cta_link?: string;
+    publisher_id?: string;
+    slot_id?: string;
     created_at?: string;
 }
 

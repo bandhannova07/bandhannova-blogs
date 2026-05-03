@@ -11,7 +11,11 @@ import {
     LogOut,
     Sparkles,
     Search,
-    Box
+    Box,
+    Users,
+    ShoppingCart,
+    Video,
+    Globe
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +32,10 @@ export function AdminSidebar({ className, activeTab, onTabChange }: SidebarProps
         { id: "overview", label: "Overview", icon: LayoutDashboard },
         { id: "generate", label: "AI Generator", icon: Sparkles },
         { id: "blogs", label: "Blogs", icon: FileText },
+        { id: "products", label: "Affiliates", icon: ShoppingCart },
+        { id: "adsense", label: "AdSense", icon: Globe },
+        { id: "brands", label: "Brand Ads", icon: Video },
+        { id: "authors", label: "Authors", icon: Users },
     ];
 
     return (

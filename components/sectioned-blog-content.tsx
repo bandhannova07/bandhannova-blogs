@@ -66,37 +66,44 @@ export function SectionedBlogContent({ contentHtml, sectionLayouts = [] }: Secti
                         {/* LEFT SIDEBAR Slot */}
                         <div className="hidden lg:block relative">
                             {index === 0 ? (
-                                /* Intro section — show a subtle label */
-                                <div className="sticky top-32 pb-8">
-                                    <div className="glass rounded-[2rem] p-8 border-white/10 bg-primary/5 text-center space-y-4">
-                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                                            <ExternalLink className="w-5 h-5 text-primary/50" />
-                                        </div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
-                                            Featured Selections
-                                        </p>
-                                    </div>
-                                </div>
+                                /* Intro section — Empty / Spacer */
+                                <div className="h-4" />
                             ) : layout ? (
                                 <div className="sticky top-32 pb-8">
                                     {layout.left.type === "affiliate" && layout.left.affiliate ? (
-                                        <div className="group glass p-5 rounded-[2rem] border-white/10 hover:border-primary/30 transition-all duration-500 shadow-xl overflow-hidden relative bg-background/60">
+                                        <div className="group glass p-6 rounded-[2rem] border-white/10 hover:border-primary/30 transition-all duration-500 shadow-xl overflow-hidden relative bg-background/60 flex flex-col justify-between min-h-[350px]">
                                             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                                            <div className="relative space-y-4">
+
+                                            {/* Ad Badge */}
+                                            <div className="flex justify-between items-start mb-4 relative z-10">
+                                                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">
+                                                    Featured
+                                                </span>
+                                                <div className="w-4 h-4 rounded-full border border-white/20 flex items-center justify-center text-[8px] text-muted-foreground opacity-50">i</div>
+                                            </div>
+
+                                            <div className="relative space-y-4 z-10 flex-1">
                                                 <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-white/5 shadow-inner">
                                                     <Image src={layout.left.affiliate.thumbnail} alt={layout.left.affiliate.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                                                 </div>
-                                                <div className="space-y-3">
-                                                    <h4 className="text-sm font-black leading-tight line-clamp-2 min-h-[2.5rem]">{layout.left.affiliate.title}</h4>
-                                                    <a href={layout.left.affiliate.link} target="_blank" rel="noopener noreferrer" className="block">
-                                                        <Button className="w-full rounded-xl py-5 font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg group-hover:shadow-primary/20 transition-shadow">
-                                                            <ShoppingCart className="w-3.5 h-3.5" />
-                                                            View Product
-                                                        </Button>
-                                                    </a>
+                                                <div className="space-y-1">
+                                                    <h4 className="text-sm font-black leading-tight line-clamp-2 text-foreground/90">{layout.left.affiliate.title}</h4>
+                                                    <p className="text-[10px] text-muted-foreground font-medium">Verified by BandhanNova</p>
                                                 </div>
                                             </div>
+
+                                            <div className="mt-4 relative z-10">
+                                                <a href={layout.left.affiliate.link} target="_blank" rel="noopener noreferrer" className="block">
+                                                    <Button className="w-full rounded-xl py-6 font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg group-hover:shadow-primary/20 transition-all bg-primary hover:scale-[1.02]">
+                                                        <ShoppingCart className="w-3.5 h-3.5" />
+                                                        Explore Now
+                                                    </Button>
+                                                </a>
+                                            </div>
+
+                                            {/* Hover Glow */}
+                                            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/10 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/20 transition-all duration-700" />
                                         </div>
                                     ) : layout.left.type === "adsense" ? (
                                         <GoogleAdCard />
@@ -140,42 +147,48 @@ export function SectionedBlogContent({ contentHtml, sectionLayouts = [] }: Secti
                                     <div className="space-y-6">
                                         {/* Mobile Affiliate/AdSense Slot */}
                                         {layout.left.type === "affiliate" && layout.left.affiliate && (
-                                            <div className="glass p-5 rounded-[2rem] border-white/10 bg-background/40">
-                                                <div className="flex gap-4">
-                                                    <div className="relative h-24 w-24 rounded-xl overflow-hidden shrink-0 border border-white/5">
+                                            <div className="glass p-4 rounded-[2rem] border-white/10 bg-background/40 relative overflow-hidden group">
+                                                <div className="flex gap-4 relative z-10">
+                                                    <div className="relative h-28 w-28 rounded-2xl overflow-hidden shrink-0 border border-white/5 shadow-xl">
                                                         <Image src={layout.left.affiliate.thumbnail} alt={layout.left.affiliate.title} fill className="object-cover" />
                                                     </div>
-                                                    <div className="flex flex-col justify-between py-1">
-                                                        <h4 className="text-xs font-black leading-tight line-clamp-2">{layout.left.affiliate.title}</h4>
+                                                    <div className="flex flex-col justify-between py-1 flex-1">
+                                                        <div>
+                                                            <div className="flex items-center gap-1.5 mb-1">
+                                                                <span className="text-[7px] font-black uppercase tracking-widest text-primary">Verified by BandhanNova</span>
+                                                            </div>
+                                                            <h4 className="text-[11px] font-black leading-tight line-clamp-2 text-foreground/90">{layout.left.affiliate.title}</h4>
+                                                        </div>
                                                         <a href={layout.left.affiliate.link} target="_blank" rel="noopener noreferrer">
-                                                            <Button size="sm" className="h-8 rounded-lg font-black uppercase tracking-widest text-[8px] gap-2">
+                                                            <Button size="sm" className="w-full h-9 rounded-xl font-black uppercase tracking-widest text-[9px] gap-2 bg-primary shadow-lg shadow-primary/20">
                                                                 <ShoppingCart className="w-3 h-3" />
-                                                                View
+                                                                Get It Now
                                                             </Button>
                                                         </a>
                                                     </div>
                                                 </div>
+                                                <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-primary/5 blur-[40px] rounded-full pointer-events-none" />
                                             </div>
                                         )}
                                         {layout.left.type === "adsense" && <GoogleAdCard />}
 
                                         {/* Mobile Brand Ad Slot */}
                                         {layout.right.type === "brand_ad" && layout.right.brand_ad && (
-                                            <div className="glass p-1 rounded-[2rem] border-white/10 overflow-hidden bg-background/40">
-                                                <div className="relative aspect-video w-full rounded-[1.8rem] overflow-hidden">
-                                                    <video 
-                                                        src={layout.right.brand_ad.video_url} 
-                                                        autoPlay loop muted playsInline 
+                                            <div className="glass p-1.5 rounded-[2.2rem] border-white/10 overflow-hidden bg-background/40 relative group">
+                                                <div className="relative aspect-video w-full rounded-[1.8rem] overflow-hidden shadow-2xl">
+                                                    <video
+                                                        src={layout.right.brand_ad.video_url}
+                                                        autoPlay loop muted playsInline
                                                         className="w-full h-full object-cover"
                                                     />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                                                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                                                        <div>
-                                                            <Badge className="bg-white/20 backdrop-blur-md text-[7px] font-black uppercase tracking-widest mb-1">Sponsored</Badge>
-                                                            <h4 className="text-white text-xs font-black">{layout.right.brand_ad.title}</h4>
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                                                    <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">
+                                                        <div className="flex-1">
+                                                            <Badge className="bg-primary/20 backdrop-blur-md text-[7px] font-black uppercase tracking-widest mb-1.5 border-primary/30">Sponsored Content</Badge>
+                                                            <h4 className="text-white text-[13px] font-black leading-tight line-clamp-1">{layout.right.brand_ad.title}</h4>
                                                         </div>
-                                                        <a href={layout.right.brand_ad.cta_link} target="_blank" rel="noopener noreferrer">
-                                                            <Button size="sm" className="h-8 rounded-lg font-black uppercase tracking-widest text-[8px] bg-primary text-white border-none">
+                                                        <a href={layout.right.brand_ad.cta_link} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                                            <Button size="sm" className="h-10 px-5 rounded-xl font-black uppercase tracking-widest text-[9px] bg-primary text-white border-none shadow-xl shadow-primary/30">
                                                                 {layout.right.brand_ad.cta_text}
                                                             </Button>
                                                         </a>
@@ -196,12 +209,12 @@ export function SectionedBlogContent({ contentHtml, sectionLayouts = [] }: Secti
                                         <div className="glass p-1 rounded-[2.6rem] border-white/10 overflow-hidden shadow-2xl relative group bg-background/60">
                                             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                                             <div className="relative aspect-[9/16] w-full rounded-[2.5rem] overflow-hidden border border-white/5">
-                                                <video 
-                                                    src={layout.right.brand_ad.video_url} 
-                                                    autoPlay 
-                                                    loop 
-                                                    muted 
-                                                    playsInline 
+                                                <video
+                                                    src={layout.right.brand_ad.video_url}
+                                                    autoPlay
+                                                    loop
+                                                    muted
+                                                    playsInline
                                                     className="w-full h-full object-cover"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -222,23 +235,39 @@ export function SectionedBlogContent({ contentHtml, sectionLayouts = [] }: Secti
                                             </div>
                                         </div>
                                     ) : layout.right.type === "affiliate" && layout.right.affiliate ? (
-                                        <div className="group glass p-5 rounded-[2rem] border-white/10 hover:border-primary/30 transition-all duration-500 shadow-xl overflow-hidden relative bg-background/60">
+                                        <div className="group glass p-6 rounded-[2rem] border-white/10 hover:border-primary/30 transition-all duration-500 shadow-xl overflow-hidden relative bg-background/60 flex flex-col justify-between min-h-[350px]">
                                             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                                            <div className="relative space-y-4">
+
+                                            {/* Ad Badge */}
+                                            <div className="flex justify-between items-start mb-4 relative z-10">
+                                                <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">
+                                                    Featured
+                                                </span>
+                                                <div className="w-4 h-4 rounded-full border border-white/20 flex items-center justify-center text-[8px] text-muted-foreground opacity-50">i</div>
+                                            </div>
+
+                                            <div className="relative space-y-4 z-10 flex-1">
                                                 <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-white/5 shadow-inner">
                                                     <Image src={layout.right.affiliate.thumbnail} alt={layout.right.affiliate.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                                                 </div>
-                                                <div className="space-y-3">
-                                                    <h4 className="text-sm font-black leading-tight line-clamp-2 min-h-[2.5rem]">{layout.right.affiliate.title}</h4>
-                                                    <a href={layout.right.affiliate.link} target="_blank" rel="noopener noreferrer" className="block">
-                                                        <Button className="w-full rounded-xl py-5 font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg group-hover:shadow-primary/20 transition-shadow">
-                                                            <ShoppingCart className="w-3.5 h-3.5" />
-                                                            View Product
-                                                        </Button>
-                                                    </a>
+                                                <div className="space-y-1">
+                                                    <h4 className="text-sm font-black leading-tight line-clamp-2 text-foreground/90">{layout.right.affiliate.title}</h4>
+                                                    <p className="text-[10px] text-muted-foreground font-medium">Verified by BandhanNova</p>
                                                 </div>
                                             </div>
+
+                                            <div className="mt-4 relative z-10">
+                                                <a href={layout.right.affiliate.link} target="_blank" rel="noopener noreferrer" className="block">
+                                                    <Button className="w-full rounded-xl py-6 font-black uppercase tracking-widest text-[10px] gap-2 shadow-lg group-hover:shadow-primary/20 transition-all bg-primary hover:scale-[1.02]">
+                                                        <ShoppingCart className="w-3.5 h-3.5" />
+                                                        Explore Now
+                                                    </Button>
+                                                </a>
+                                            </div>
+
+                                            {/* Hover Glow */}
+                                            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/10 blur-[80px] rounded-full pointer-events-none group-hover:bg-primary/20 transition-all duration-700" />
                                         </div>
                                     ) : layout.right.type === "adsense" ? (
                                         <GoogleAdCard />

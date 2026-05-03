@@ -59,13 +59,15 @@ marked.use({
                 return `
                 <div class="premium-callout callout-${type.toLowerCase()} my-12 p-8 rounded-[2rem] border-l-8 transition-all duration-500 hover:scale-[1.01] backdrop-blur-xl border-white/10 shadow-lg relative overflow-hidden group" style="background-color: rgba(0, 0, 0, 0.06);">
                     <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                    <div class="flex items-start gap-6 relative z-10">
-                        <div class="callout-icon-container p-3 rounded-2xl border border-white/10 shadow-inner" style="background-color: rgba(255, 255, 255, 0.6);">
-                            ${icons[type] || ''}
+                    <div class="relative z-10 space-y-6">
+                        <div class="flex items-center gap-4">
+                            <div class="callout-icon-container p-2.5 rounded-2xl border border-white/10 shadow-inner" style="background-color: rgba(255, 255, 255, 0.6);">
+                                ${icons[type] || ''}
+                            </div>
+                            <div class="callout-label font-black text-[11px] uppercase tracking-[0.4em] opacity-80">${type}</div>
                         </div>
-                        <div class="callout-content flex-1">
-                            <div class="callout-label font-black text-[10px] uppercase tracking-[0.3em] mb-3 opacity-60">${type}</div>
-                            <div class="callout-body prose prose-sm md:prose-base dark:prose-invert font-medium leading-relaxed">${content}</div>
+                        <div class="callout-body prose prose-sm md:prose-base dark:prose-invert font-medium leading-relaxed pl-1">
+                            ${content}
                         </div>
                     </div>
                 </div>
@@ -107,6 +109,16 @@ marked.setOptions({
     breaks: true,
     gfm: true,
 });
+
+export function inlineMarkdownToHtml(markdown: string): string {
+    if (!markdown) return '';
+    const processed = markdown.replace(/\\n/g, ' ');
+    try {
+        return marked.parseInline(processed) as string;
+    } catch (error) {
+        return processed;
+    }
+}
 
 export function markdownToHtml(markdown: string): string {
     if (!markdown) return '';

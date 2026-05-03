@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
             published_at: body.published_at,
         });
 
+        // Notify Google Indexing API for immediate ranking
+        try {
+            const { notifyGoogleOfUpdate } = await import("@/lib/seo-service");
+            await notifyGoogleOfUpdate(`https://blogs.bandhannova.in/blog/${blog.slug}`);
+        } catch (seoError) {
+            console.error("SEO Notification failed:", seoError);
+        }
+
         return NextResponse.json({ blog, success: true });
     } catch (error: any) {
         console.error("Error creating blog:", error);

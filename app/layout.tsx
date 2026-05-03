@@ -18,7 +18,14 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "BandhanNova - Blogs & Insights",
   description: "Explore cutting-edge insights, tutorials, and updates from BandhanNova AI Hub. Stay ahead with the latest in AI, web development, and innovative technology.",
-  keywords: ["BandhanNova", "AI", "Machine Learning", "Web Development", "Technology", "Tutorials", "Bandhan", "Blogs", "Blogs updates"],
+  keywords: ["BandhanNova", "AI", "Machine Learning", "Web Development", "Technology", "Tutorials", "Bandhan", "Blogs", "Blogs updates", 'Best', 'Top', 'Ultimate', 'Guide', 'Review', 'Comparison',
+    'Tips', 'Tricks', 'Hacks', 'Ideas',
+    'How to', 'Why', 'What is', 'Step by step', 'Beginner guide', 'Easy way', 'Fastest way',
+    'Earn money', 'Make money online', 'Free', 'Discount', 'Deals', 'Cheap', 'Affordable',
+    'Latest', 'New', 'Updated', 'Trending', 'Viral', '2026',
+    'How to start a blog in 2026', 'Best free tools for blogging',
+    'Make money blogging step by step', 'SEO tips for beginners 2026',
+    'Top blogging platforms comparison'],
   icons: {
     icon: "/favicon.ico",
   },
@@ -26,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "BandhanNova - Blogs & Insights",
     description: "Explore cutting-edge insights, tutorials, and updates from BandhanNova AI Hub",
-    url: "https://www.bandhannova.in",
+    url: "https://blogs.bandhannova.in",
     siteName: "BandhanNova Blogs",
     type: "website",
   },
@@ -122,6 +129,39 @@ export default function RootLayout({
             }
           `}
         </Script>
+
+        {/* Global SEO Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "BandhanNova",
+              "url": "https://blogs.bandhannova.in",
+              "logo": "https://blogs.bandhannova.in/favicon.ico",
+              "sameAs": [
+                "https://twitter.com/BandhanNova",
+                "https://github.com/lordbandhan"
+              ]
+            })
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "url": "https://blogs.bandhannova.in",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://blogs.bandhannova.in/?search={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            })
+          }}
+        />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}

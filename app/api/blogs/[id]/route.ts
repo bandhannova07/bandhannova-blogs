@@ -13,6 +13,14 @@ export async function PUT(
 
         const updatedBlog = await updateBlog(id, body);
 
+        // Notify Google Indexing API for immediate ranking
+        try {
+            const { notifyGoogleOfUpdate } = await import("@/lib/seo-service");
+            await notifyGoogleOfUpdate(`https://blogs.bandhannova.in/blog/${updatedBlog.slug}`);
+        } catch (seoError) {
+            console.error("SEO Notification failed:", seoError);
+        }
+
         return NextResponse.json({ blog: updatedBlog, success: true });
     } catch (error: any) {
         console.error("Error updating blog:", error);

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -38,12 +37,26 @@ import {
 } from "lucide-react";
 import { categories } from "@/lib/blog-data";
 import Image from "next/image";
-import type { Blog } from "@/lib/blog-service";
+import type { Blog, Author } from "@/lib/blog-service";
 import { ImageCropper } from "@/components/image-cropper";
 import { markdownToHtml } from "@/lib/markdown-utils";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { cn } from "@/lib/utils";
-import { ShoppingCart, Video, Layout, Info } from "lucide-react";
+import { ShoppingCart, Video, Layout, Info, Star, Users, User } from "lucide-react";
+import { 
+    Tabs, 
+    TabsContent, 
+    TabsList, 
+    TabsTrigger 
+} from "@/components/ui/tabs";
+import { 
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminPage() {
     const router = useRouter();
@@ -57,14 +70,24 @@ export default function AdminPage() {
     const [thumbnail, setThumbnail] = useState<File | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState("");
     const [showCropper, setShowCropper] = useState(false);
+    const [isFeatured, setIsFeatured] = useState(false);
     const [imageToCrop, setImageToCrop] = useState("");
     const [generating, setGenerating] = useState(false);
     const [generatedBlog, setGeneratedBlog] = useState("");
-    const [authorName, setAuthorName] = useState("BandhanNova AI Team");
-    const [authorAvatarPreview, setAuthorAvatarPreview] = useState("/bandhannova-logo-final.svg");
     const [metadata, setMetadata] = useState<any>(null);
     const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
     const [editMode, setEditMode] = useState(false);
+
+    // Authors states
+    const [authors, setAuthors] = useState<Author[]>([]);
+    const [loadingAuthors, setLoadingAuthors] = useState(false);
+    const [editingAuthorId, setEditingAuthorId] = useState<string | null>(null);
+    const [authorForm, setAuthorForm] = useState({
+        name: "",
+        avatar: "",
+        profession: "Intelligence Architect"
+    });
+    const [showSidebar, setShowSidebar] = useState(false);
 
     // Image Prompt States
     const [placeholderImages, setPlaceholderImages] = useState<Record<string, string>>({});
@@ -84,7 +107,9 @@ export default function AdminPage() {
         link: "",      // Affiliate Link
         video_url: "", // Brand Video
         cta_text: "",  // Brand CTA Button Text
-        cta_link: ""   // Brand Redirection URL
+        cta_link: "",  // Brand Redirection URL
+        publisher_id: "", // AdSense
+        slot_id: ""       // AdSense
     });
     const [uploadingAsset, setUploadingAsset] = useState(false);
 
@@ -123,13 +148,15 @@ export default function AdminPage() {
     const [publishedBlogs, setPublishedBlogs] = useState<Blog[]>([]);
     const [loadingBlogs, setLoadingBlogs] = useState(false);
 
-    // Stats
     const [stats, setStats] = useState({
         totalBlogs: 0,
         totalViews: 0,
         uniqueCategories: 0,
         avgReadTime: 0
     });
+
+    const [authorName, setAuthorName] = useState("BandhanNova AI Team");
+    const [authorAvatarPreview, setAuthorAvatarPreview] = useState("/bandhannova-logo-final.svg");
 
     useEffect(() => {
         checkAuth();
@@ -155,8 +182,54 @@ export default function AdminPage() {
         if (isAuthenticated) {
             fetchPublishedBlogs();
             fetchProducts();
+            fetchAuthors();
         }
     }, [isAuthenticated]);
+
+    const fetchAuthors = async () => {
+        setLoadingAuthors(true);
+        try {
+            const response = await fetch("/api/authors");
+            if (response.ok) {
+                const data = await response.json();
+                setAuthors(data.authors || []);
+            }
+        } catch (error) {
+            console.error("Error fetching authors:", error);
+        } finally {
+            setLoadingAuthors(false);
+        }
+    };
+
+    const handleUpsertAuthor = async () => {
+        if (!authorForm.name) return;
+        try {
+            const url = editingAuthorId ? `/api/authors/${editingAuthorId}` : "/api/authors";
+            const method = editingAuthorId ? "PUT" : "POST";
+            const response = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(authorForm),
+            });
+            if (response.ok) {
+                setEditingAuthorId(null);
+                setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" });
+                fetchAuthors();
+            }
+        } catch (error) {
+            console.error("Error saving author:", error);
+        }
+    };
+
+    const handleDeleteAuthor = async (id: string) => {
+        if (!confirm("Delete this writer profile?")) return;
+        try {
+            const response = await fetch(`/api/authors/${id}`, { method: "DELETE" });
+            if (response.ok) fetchAuthors();
+        } catch (error) {
+            console.error("Error deleting author:", error);
+        }
+    };
 
     const fetchProducts = async () => {
         setLoadingProducts(true);
@@ -211,10 +284,10 @@ export default function AdminPage() {
         };
 
         return (
-            <div className="my-10 p-8 rounded-[2.5rem] bg-white/[0.02] border border-dashed border-white/10 space-y-6 group/prompt hover:border-primary/30 transition-all">
+            <div className="my-6 p-6 rounded-xl bg-white/[0.02] border border-white/5 space-y-4 group/prompt hover:border-primary/20 transition-all">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
                             <ImageIcon className="h-5 w-5 text-primary" />
                         </div>
                         <div>
@@ -235,7 +308,7 @@ export default function AdminPage() {
                     </Button>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-black/40 border border-white/5 relative">
+                <div className="p-6 rounded-xl bg-black/40 border border-white/5 relative">
                     <p className="text-xs italic leading-relaxed text-muted-foreground/60 pr-10">"{prompt}"</p>
                     <div className="absolute top-4 right-4">
                         <Sparkles className="h-3.5 w-3.5 text-primary/20" />
@@ -243,7 +316,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <label className="flex-1 h-14 rounded-2xl bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-all flex items-center justify-center cursor-pointer group/upload">
+                    <label className="flex-1 h-12 rounded-xl bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-all flex items-center justify-center cursor-pointer group/upload">
                         <div className="flex items-center gap-3">
                             {uploading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Upload className="h-4 w-4 text-primary/60 group-hover/upload:text-primary" />}
                             <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 group-hover/upload:text-primary">
@@ -415,6 +488,7 @@ export default function AdminPage() {
                 tags: metadata.tags,
                 sources: sources.filter(s => s.trim()).map(url => ({ url, content: "" })),
                 section_layouts: sectionLayouts,
+                is_featured: isFeatured,
                 published_at: editingBlogId 
                     ? publishedBlogs.find(b => b.id === editingBlogId)?.published_at 
                     : new Date().toISOString(),
@@ -442,6 +516,7 @@ export default function AdminPage() {
             setEditingBlogId(null);
             setSources([""]);
             setCategory("");
+            setIsFeatured(false);
             setActiveTab("blogs");
 
             fetchPublishedBlogs();
@@ -470,7 +545,9 @@ export default function AdminPage() {
         setAuthorName(blog.author_name);
         setAuthorAvatarPreview(blog.author_avatar);
         setSectionLayouts(blog.section_layouts || []);
+        setIsFeatured(blog.is_featured || false);
         setSources((blog.sources as any[])?.map(s => s.url) || [""]);
+        window.scrollTo({ top: 0, behavior: "smooth" });
         setActiveTab("generate");
     };
 
@@ -484,7 +561,7 @@ export default function AdminPage() {
             });
             if (response.ok) {
                 setEditingProductId(null);
-                setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "" });
+                setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "", publisher_id: "", slot_id: "" });
                 fetchProducts();
             }
         } catch (error) {
@@ -591,31 +668,68 @@ export default function AdminPage() {
 
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-primary/30">
-            <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+            <AdminSidebar 
+                activeTab={activeTab} 
+                onTabChange={(tab) => {
+                    setActiveTab(tab);
+                    setShowSidebar(false);
+                }} 
+                className={cn(
+                    "fixed inset-y-0 left-0 z-50 transform lg:translate-x-0 transition-transform duration-300 ease-in-out",
+                    showSidebar ? "translate-x-0" : "-translate-x-full"
+                )}
+            />
             
-            <main className="pl-64 min-h-screen">
+            {/* Mobile Sidebar Overlay */}
+            {showSidebar && (
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={() => setShowSidebar(false)}
+                />
+            )}
+            
+            <main className="lg:pl-64 min-h-screen">
                 {/* Minimal Header */}
-                <header className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-40">
+                <header className="h-12 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-6 md:px-6 sticky top-0 z-40">
                     <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">{activeTab}</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">Management</span>
                         <div className="h-3 w-px bg-white/10" />
                         <h2 className="text-xs font-bold text-muted-foreground/60">BandhanNova Blogs</h2>
                     </div>
-                    <div className="flex items-center gap-6">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-white/5">
                             <Search className="h-4 w-4 text-muted-foreground/40" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="lg:hidden h-9 w-9 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 relative z-[60]"
+                            onClick={() => setShowSidebar(!showSidebar)}
+                        >
+                            {showSidebar ? <X className="h-4 w-4" /> : <Layout className="h-4 w-4" />}
                         </Button>
                     </div>
                 </header>
 
-                <div className="p-10 max-w-6xl mx-auto space-y-10">
-                    
-                    {/* OVERVIEW TAB */}
-                    {activeTab === "overview" && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="p-6 max-w-full mx-auto space-y-6">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+                        <div className="hidden lg:flex items-center justify-between">
+                            <TabsList className="bg-zinc-900/50 border border-white/5 p-1 rounded-xl">
+                                <TabsTrigger value="overview" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Overview</TabsTrigger>
+                                <TabsTrigger value="blogs" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Blogs</TabsTrigger>
+                                <TabsTrigger value="generate" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Generator</TabsTrigger>
+                                <TabsTrigger value="authors" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Authors</TabsTrigger>
+                                <TabsTrigger value="products" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Affiliates</TabsTrigger>
+                                <TabsTrigger value="adsense" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">AdSense</TabsTrigger>
+                                <TabsTrigger value="brands" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Brands</TabsTrigger>
+                                <TabsTrigger value="settings" className="rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-primary">Settings</TabsTrigger>
+                            </TabsList>
+                        </div>
+
+                        <TabsContent value="overview" className="space-y-8">
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div className="flex flex-col gap-1">
                                 <h1 className="text-3xl font-black tracking-tighter">Dashboard</h1>
-                                <p className="text-muted-foreground text-sm">Welcome back to the content command center.</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -625,7 +739,7 @@ export default function AdminPage() {
                                     { label: "Categories", value: stats.uniqueCategories, icon: TrendingUp, color: "text-emerald-500" },
                                     { label: "Avg Read", value: `${stats.avgReadTime}m`, icon: TrendingUp, color: "text-amber-500" },
                                 ].map((stat, i) => (
-                                    <div key={i} className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                                    <div key={i} className="p-5 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className={cn("p-2 rounded-xl bg-current opacity-10", stat.color)} />
                                             <stat.icon className={cn("h-4 w-4", stat.color)} />
@@ -637,19 +751,18 @@ export default function AdminPage() {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <Card className="lg:col-span-2 bg-white/[0.02] border-white/5 rounded-[2rem] overflow-hidden">
-                                    <CardHeader className="p-8 pb-4">
+                                <Card className="lg:col-span-2 bg-white/[0.02] border-white/5 rounded-xl overflow-hidden">
+                                    <CardHeader className="p-6 pb-2">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <CardTitle className="text-lg font-black tracking-tight">Recent Activity</CardTitle>
-                                                <CardDescription className="text-xs">Your latest published intelligence.</CardDescription>
                                             </div>
                                             <Button variant="ghost" size="sm" onClick={() => setActiveTab("blogs")} className="text-[10px] font-black uppercase tracking-widest gap-2">
                                                 View All <ChevronRight className="h-3 w-3" />
                                             </Button>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-8 pt-0">
+                                    <CardContent className="p-6 pt-0">
                                         <div className="divide-y divide-white/5">
                                             {publishedBlogs.slice(0, 4).map((blog) => (
                                                 <div key={blog.id} className="py-4 flex items-center justify-between group cursor-pointer" onClick={() => handleEditBlog(blog)}>
@@ -675,61 +788,29 @@ export default function AdminPage() {
                                     </CardContent>
                                 </Card>
 
-                                <div className="space-y-4">
-                                    <div className="p-8 rounded-[2rem] bg-primary/10 border border-primary/20 relative overflow-hidden group hover:bg-primary/[0.15] transition-all cursor-pointer" onClick={() => setActiveTab("generate")}>
-                                        <div className="relative z-10">
-                                            <Sparkles className="h-6 w-6 text-primary mb-4" />
-                                            <h3 className="text-lg font-black tracking-tight mb-1">Create New</h3>
-                                            <p className="text-xs text-muted-foreground font-medium leading-relaxed">Launch the AI Generator to architect fresh content.</p>
-                                        </div>
-                                        <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/20 blur-3xl rounded-full group-hover:scale-150 transition-transform duration-700" />
-                                    </div>
-                                    
-                                    <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/30 mb-6">Quick Tools</h3>
-                                        <div className="space-y-2">
-                                            <button onClick={fetchPublishedBlogs} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
-                                                <span className="text-xs font-bold text-muted-foreground/60 group-hover:text-white">Refresh Fleet</span>
-                                                <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground/30", loadingBlogs && "animate-spin")} />
-                                            </button>
-                                            <button onClick={() => router.push("/")} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
-                                                <span className="text-xs font-bold text-muted-foreground/60 group-hover:text-white">View Site</span>
-                                                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/30" />
-                                            </button>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        </TabsContent>
 
-                    {/* GENERATE TAB */}
-                    {activeTab === "generate" && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <TabsContent value="generate" className="space-y-8">
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col gap-1">
                                     <h1 className="text-3xl font-black tracking-tighter">
                                         {editingBlogId ? "Edit Intelligence" : "AI Generator"}
                                     </h1>
-                                    <p className="text-sm text-muted-foreground">Architect SEO-optimized technical content with precision.</p>
                                 </div>
-                                {editingBlogId && (
-                                    <Button variant="ghost" onClick={() => { setEditingBlogId(null); setTopic(""); setGeneratedBlog(""); }} className="text-red-400/60 hover:text-red-500 hover:bg-red-500/5 text-xs font-black uppercase tracking-widest">
-                                        Discard Edit
-                                    </Button>
-                                )}
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <div className="lg:col-span-2 space-y-6">
-                                    <Card className="bg-white/[0.02] border-white/5 rounded-[2.5rem] p-8 space-y-8">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Topic</label>
                                             <Input
                                                 placeholder="e.g., The Evolution of Distributed Computing"
                                                 value={topic}
                                                 onChange={(e) => setTopic(e.target.value)}
-                                                className="bg-white/5 border-white/10 h-14 text-lg font-bold rounded-2xl focus:ring-1 ring-primary/30"
+                                                className="bg-white/5 border-white/10 h-12 text-sm font-bold rounded-lg focus:ring-1 ring-primary/30 transition-all"
                                                 disabled={generating}
                                             />
                                         </div>
@@ -737,19 +818,48 @@ export default function AdminPage() {
                                         {/* Author Details */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-3">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Author Name</label>
+                                                <div className="flex items-center justify-between ml-1">
+                                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Writer Profile</label>
+                                                    <button 
+                                                        onClick={() => setActiveTab("authors")}
+                                                        className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-colors"
+                                                    >
+                                                        Manage Writers
+                                                    </button>
+                                                </div>
+                                                <select 
+                                                    className="w-full bg-white/5 border border-white/10 h-12 px-4 text-sm font-bold rounded-lg focus:ring-1 ring-primary/30 outline-none text-white transition-all"
+                                                    onChange={(e) => {
+                                                        const author = authors.find(a => a.id === e.target.value);
+                                                        if (author) {
+                                                            setAuthorName(author.name);
+                                                            setAuthorAvatarPreview(author.avatar);
+                                                        }
+                                                    }}
+                                                    value={authors.find(a => a.name === authorName)?.id || ""}
+                                                >
+                                                    <option value="" disabled className="bg-zinc-950">Select a Writer</option>
+                                                    {authors.map(author => (
+                                                        <option key={author.id} value={author.id} className="bg-zinc-950">{author.name}</option>
+                                                    ))}
+                                                    <option value="manual" className="bg-zinc-950">Manual Entry</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Author Name (Manual)</label>
                                                 <Input
                                                     placeholder="e.g., John Doe"
                                                     value={authorName}
                                                     onChange={(e) => setAuthorName(e.target.value)}
-                                                    className="bg-white/5 border-white/10 h-14 text-sm font-bold rounded-2xl focus:ring-1 ring-primary/30"
+                                                    className="bg-white/5 border-white/10 h-12 text-sm font-bold rounded-lg focus:ring-1 ring-primary/30 transition-all"
                                                     disabled={generating}
                                                 />
                                             </div>
+                                        </div>
                                             <div className="space-y-3">
                                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 ml-1">Author Avatar</label>
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-14 w-14 rounded-2xl overflow-hidden border border-white/10 flex-shrink-0 bg-white/5 relative">
+                                                    <div className="h-12 w-14 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 bg-white/5 relative">
                                                         {authorAvatarPreview ? (
                                                             <Image src={authorAvatarPreview} alt="Avatar" width={56} height={56} className="object-cover h-full w-full" />
                                                         ) : (
@@ -758,7 +868,7 @@ export default function AdminPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <label className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center cursor-pointer">
+                                                    <label className="flex-1 h-12 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center cursor-pointer">
                                                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Upload Avatar</span>
                                                         <input 
                                                             type="file" 
@@ -783,7 +893,7 @@ export default function AdminPage() {
                                                     </label>
                                                 </div>
                                             </div>
-                                        </div>
+
 
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between ml-1">
@@ -829,7 +939,7 @@ export default function AdminPage() {
                                         <Button 
                                             onClick={handleGenerate} 
                                             disabled={generating || !topic.trim()} 
-                                            className="w-full h-16 rounded-2xl bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all group overflow-hidden"
+                                            className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all group overflow-hidden"
                                         >
                                             {generating ? (
                                                 <Loader2 className="h-5 w-5 animate-spin opacity-50" />
@@ -844,18 +954,17 @@ export default function AdminPage() {
 
                                     {/* AI IMAGE STRATEGY SECTION */}
                                     {metadata?.imagePrompts && metadata.imagePrompts.length > 0 && (
-                                        <Card className="bg-white/[0.02] border-white/5 rounded-[2.5rem] p-8 space-y-6">
+                                        <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <h3 className="text-lg font-black tracking-tight">AI Image Strategy</h3>
-                                                    <p className="text-xs text-muted-foreground">The AI has identified strategic points for visual content.</p>
                                                 </div>
                                                 <ImageIcon className="h-5 w-5 text-primary/40" />
                                             </div>
                                             
                                             <div className="space-y-4">
-                                                {metadata.imagePrompts.map((item: any) => (
-                                                    <div key={item.id} className="p-6 rounded-3xl bg-white/[0.01] border border-white/5 space-y-4">
+                                                {metadata.imagePrompts.map((item: any, idx: number) => (
+                                                    <div key={item.id || idx} className="p-6 rounded-xl bg-white/[0.01] border border-white/5 space-y-4">
                                                         <div className="flex items-center justify-between">
                                                             <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-primary/20 text-primary">
                                                                 {item.id}
@@ -903,12 +1012,12 @@ export default function AdminPage() {
                                 </div>
 
                                 <div className="space-y-6">
-                                    <Card className="bg-white/[0.02] border-white/5 rounded-[2.5rem] p-6 space-y-6">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 ml-1">Thumbnail</label>
                                             <div 
                                                 className={cn(
-                                                    "relative aspect-video w-full rounded-[2rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center hover:border-primary/20 transition-all cursor-pointer overflow-hidden group",
+                                                    "relative aspect-video w-full rounded-xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center hover:border-primary/20 transition-all cursor-pointer overflow-hidden group",
                                                     thumbnailPreview && "border-solid border-white/10"
                                                 )}
                                                 onClick={() => !generating && document.getElementById("thumb-upload")?.click()}
@@ -989,15 +1098,14 @@ export default function AdminPage() {
                                             </Badge>
                                         </div>
                                         <div className="flex gap-3">
-                                            <Button variant="ghost" onClick={() => setGeneratedBlog("")} className="text-muted-foreground hover:text-white text-xs font-bold px-4">Discard</Button>
                                             <Button onClick={handlePublish} className="rounded-xl bg-primary px-6 font-black uppercase tracking-widest text-[10px] shadow-lg h-11">
                                                 {editingBlogId ? "Update Intelligence" : "Push to Production"}
                                             </Button>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                                        <div className="lg:col-span-3 bg-white/[0.01] rounded-[2.5rem] p-10 border border-white/5 shadow-2xl overflow-hidden relative group">
+                                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                        <div className="lg:col-span-3 bg-white/[0.01] rounded-xl p-6 border border-white/5 shadow-2xl overflow-hidden relative group">
                                             <div className="absolute top-6 right-6 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button 
                                                     variant="outline" 
@@ -1013,7 +1121,7 @@ export default function AdminPage() {
                                                 <textarea
                                                     value={generatedBlog}
                                                     onChange={(e) => setGeneratedBlog(e.target.value)}
-                                                    className="w-full h-[800px] bg-transparent text-muted-foreground/90 font-mono text-sm leading-relaxed outline-none resize-none scrollbar-thin scrollbar-thumb-white/10"
+                                                    className="w-full h-[800px] bg-black/40 text-white font-mono text-sm leading-relaxed outline-none resize-none scrollbar-thin scrollbar-thumb-white/10 p-6 rounded-xl border border-white/10 shadow-inner"
                                                     placeholder="Blog content in markdown..."
                                                 />
                                             ) : (
@@ -1036,7 +1144,7 @@ export default function AdminPage() {
                                                         return (
                                                             <div 
                                                                 key={idx}
-                                                                className="prose prose-invert prose-sm md:prose-base max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-p:text-muted-foreground/80 prose-strong:text-primary prose-blockquote:border-l-primary prose-blockquote:bg-white/5 prose-blockquote:rounded-r-2xl prose-blockquote:p-6 prose-img:rounded-[2rem] prose-img:border prose-img:border-white/10"
+                                                                className="prose prose-invert prose-sm md:prose-base max-w-none !text-white prose-headings:!text-white prose-p:!text-white prose-li:!text-white prose-strong:!text-primary prose-code:!text-white prose-blockquote:!text-white/70 prose-blockquote:border-l-primary prose-blockquote:bg-white/5 prose-blockquote:rounded-r-xl prose-blockquote:p-6 prose-img:rounded-xl prose-img:border prose-img:border-white/10"
                                                                 dangerouslySetInnerHTML={{ __html: markdownToHtml(part) }}
                                                             />
                                                         );
@@ -1045,7 +1153,7 @@ export default function AdminPage() {
                                             )}
                                         </div>
                                         <div className="space-y-4">
-                                            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
+                                            <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 space-y-4">
                                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/60">Metadata</h4>
                                                 <div className="space-y-4">
                                                     <div>
@@ -1060,32 +1168,39 @@ export default function AdminPage() {
                                                             ))}
                                                         </div>
                                                     </div>
+                                                    <div className="pt-2">
+                                                        <button 
+                                                            onClick={() => setIsFeatured(!isFeatured)}
+                                                            className={cn(
+                                                                "w-full h-10 rounded-xl border flex items-center justify-center gap-2 transition-all",
+                                                                isFeatured 
+                                                                    ? "bg-amber-500/10 border-amber-500/20 text-amber-500" 
+                                                                    : "bg-white/5 border-white/10 text-muted-foreground/40"
+                                                            )}
+                                                        >
+                                                            <Star className={cn("h-3 w-3", isFeatured && "fill-amber-500")} />
+                                                            <span className="text-[9px] font-black uppercase tracking-widest">{isFeatured ? "Featured Content" : "Mark as Featured"}</span>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-
+                                        </div>
                                     </div>
-                                    </div>
+                                </div>
+                            )}
 
                                     {/* Section Orchestrator - Full Width Dedicated Layout */}
-                                    <div className="p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 space-y-10">
-                                        <div className="flex items-center justify-between border-b border-white/5 pb-8">
-                                            <div className="flex items-center gap-5">
-                                                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                                    <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 space-y-6">
+                                        <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
                                                     <Layout className="h-6 w-6 text-primary" />
                                                 </div>
                                                 <div>
                                                     <h4 className="text-2xl font-black tracking-tighter">Section Orchestrator</h4>
-                                                    <p className="text-xs font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest">Architect monetization slots for each chapter</p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-3">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    onClick={handleClearAllProducts}
-                                                    className="h-12 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500/40 hover:text-red-500 hover:bg-red-500/5 transition-all"
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-2" /> Wipe Inventory
-                                                </Button>
                                                 <Button 
                                                     variant="ghost" 
                                                     onClick={() => setShowProductManager(!showProductManager)}
@@ -1096,19 +1211,12 @@ export default function AdminPage() {
                                                 >
                                                     {showProductManager ? "Close Asset Manager" : "Manage Product Inventory"}
                                                 </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    onClick={syncHeadings}
-                                                    className="h-12 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/5 text-muted-foreground hover:bg-white/10"
-                                                >
-                                                    <RefreshCw className="h-4 w-4 mr-2" /> Sync Headings
-                                                </Button>
                                             </div>
                                         </div>
 
                                         {showProductManager && (
-                                            <div className="space-y-8 p-10 rounded-[2.5rem] bg-black/40 border border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
-                                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                                            <div className="space-y-6 p-6 rounded-xl bg-black/40 border border-white/5 animate-in fade-in slide-in-from-top-4 duration-500">
+                                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                                     {/* Asset Creation Form */}
                                                     <div className="lg:col-span-1 space-y-6">
                                                         <h5 className="text-xs font-black uppercase tracking-widest text-primary/60 border-b border-white/5 pb-4">Register New Asset</h5>
@@ -1206,12 +1314,12 @@ export default function AdminPage() {
                                                             <Button 
                                                                 onClick={handleUpsertProduct} 
                                                                 disabled={uploadingAsset}
-                                                                className="flex-1 h-14 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+                                                                className="flex-1 h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
                                                             >
                                                                 {editingProductId ? "Update Asset" : "Register Asset"}
                                                             </Button>
                                                             {editingProductId && (
-                                                                <Button variant="ghost" onClick={() => { setEditingProductId(null); setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "" }); }} className="h-14 px-6 text-[10px] font-black uppercase tracking-widest">Cancel</Button>
+                                                                <Button variant="ghost" onClick={() => { setEditingProductId(null); setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "", publisher_id: "", slot_id: "" }); }} className="h-12 px-6 text-[10px] font-black uppercase tracking-widest">Cancel</Button>
                                                             )}
                                                         </div>
                                                     </div>
@@ -1221,10 +1329,10 @@ export default function AdminPage() {
                                                     <div className="lg:col-span-2 space-y-4">
                                                         <h5 className="text-xs font-black uppercase tracking-widest text-muted-foreground/40 border-b border-white/5 pb-4">Available Inventory ({products.length})</h5>
                                                         <div className="max-h-[500px] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 pr-4 scrollbar-thin scrollbar-thumb-white/10">
-                                                            {products.map((p) => (
-                                                                <div key={p.id} className="p-6 rounded-[1.5rem] bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:bg-white/[0.05] hover:border-white/10 transition-all">
+                                                            {products.map((p, idx) => (
+                                                                <div key={p.id || idx} className="p-6 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between group hover:bg-white/[0.05] hover:border-white/10 transition-all">
                                                                     <div className="flex items-center gap-5 min-w-0">
-                                                                        <div className="h-16 w-16 rounded-2xl bg-black/40 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5 relative shadow-inner">
+                                                                        <div className="h-12 w-16 rounded-xl bg-black/40 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white/5 relative shadow-inner">
                                                                             {p.type === 'brand' ? <Video className="h-6 w-6 text-primary/40" /> : <ShoppingCart className="h-6 w-6 text-blue-500/40" />}
                                                                             {p.thumbnail && <Image src={p.thumbnail} alt="" width={64} height={64} className="object-cover" />}
                                                                         </div>
@@ -1240,7 +1348,7 @@ export default function AdminPage() {
                                                                 </div>
                                                             ))}
                                                             {products.length === 0 && (
-                                                                <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                                                                <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-xl">
                                                                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/20">Inventory is Empty</p>
                                                                 </div>
                                                             )}
@@ -1250,153 +1358,91 @@ export default function AdminPage() {
                                             </div>
                                         )}
                                         
-                                        <div className="grid grid-cols-1 gap-6">
+                                        <div className="space-y-4">
                                             {sectionLayouts.map((section, idx) => (
-                                                <div key={idx} className="p-10 rounded-[2.5rem] bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all group relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
+                                                <div key={idx} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col md:flex-row md:items-center gap-4">
+                                                    <div className="w-full md:w-48">
+                                                        <p className="text-[10px] font-black uppercase text-primary mb-1">Section {idx + 1}</p>
+                                                        <p className="text-xs font-bold text-white truncate">{section.heading}</p>
+                                                    </div>
                                                     
-                                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                                                        {/* Section Heading Info */}
-                                                        <div className="lg:col-span-3 space-y-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <Badge variant="outline" className="text-[10px] font-black border-primary/40 text-primary bg-primary/5 h-9 px-5 rounded-xl">SECTION {idx + 1}</Badge>
-                                                                <div className="h-px flex-1 bg-white/5" />
-                                                            </div>
-                                                            <h5 className="text-xl font-black text-white/90 leading-tight pr-6">{section.heading}</h5>
-                                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Targeting H2 Chapter</p>
+                                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <p className="text-[8px] font-black uppercase text-muted-foreground/40 ml-1">Left Slot</p>
+                                                            <select 
+                                                                className="w-full bg-zinc-900 border border-white/10 rounded-lg h-10 px-3 text-xs font-bold text-white outline-none focus:ring-1 ring-primary/30"
+                                                                value={section.left.type}
+                                                                onChange={(e) => updateSectionLayout(idx, 'left', e.target.value)}
+                                                            >
+                                                                <option value="nothing">None</option>
+                                                                <option value="affiliate">Affiliate</option>
+                                                            </select>
+                                                            {section.left.type === 'affiliate' && (
+                                                                <select 
+                                                                    className="w-full bg-primary/10 border border-primary/20 rounded-lg h-10 px-3 text-xs font-black text-primary mt-1 outline-none"
+                                                                    onChange={(e) => {
+                                                                        const item = products.find(p => p.title === e.target.value);
+                                                                        updateSectionLayout(idx, 'left', 'affiliate', { affiliate: item });
+                                                                    }}
+                                                                    value={section.left.affiliate?.title || ""}
+                                                                >
+                                                                    <option value="" disabled>Link Item</option>
+                                                                    {products.filter(p => p.type === 'affiliate').map((a, idx) => <option key={a.id || idx} value={a.title} className="bg-black text-white">{a.title}</option>)}
+                                                                </select>
+                                                            )}
                                                         </div>
-                                                        
-                                                        {/* Configuration Area */}
-                                                        <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-10">
-                                                            {/* Left Injection Slot */}
-                                                            <div className="p-8 rounded-3xl bg-black/40 border border-white/5 space-y-5 relative">
-                                                                <div className="flex items-center justify-between">
-                                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Left Sidebar Injection</p>
-                                                                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                                                                </div>
-                                                                <div className="relative">
-                                                                    <select 
-                                                                        className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-5 text-sm font-bold text-white outline-none focus:ring-2 ring-primary/50 appearance-none cursor-pointer"
-                                                                        value={section.left.type}
-                                                                        onChange={(e) => updateSectionLayout(idx, 'left', e.target.value)}
-                                                                    >
-                                                                        <option value="nothing">Disable Sidebar Placement</option>
-                                                                        <option value="affiliate">Affiliate Link Card</option>
-                                                                    </select>
-                                                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                        <Layout className="h-4 w-4 text-muted-foreground/40" />
-                                                                    </div>
-                                                                </div>
-                                                                
-                                                                {section.left.type === 'affiliate' && (
-                                                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                                                                        <select 
-                                                                            className="w-full bg-primary/10 border border-primary/40 rounded-2xl p-5 text-sm font-black text-primary outline-none mt-3 appearance-none cursor-pointer"
-                                                                            onChange={(e) => {
-                                                                                const item = products.find(p => p.title === e.target.value);
-                                                                                updateSectionLayout(idx, 'left', 'affiliate', { affiliate: item });
-                                                                            }}
-                                                                            value={section.left.affiliate?.title || ""}
-                                                                        >
-                                                                            <option value="" disabled>Link Inventory Item</option>
-                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title} className="bg-black text-white">{a.title}</option>)}
-                                                                        </select>
-                                                                    </div>
-                                                                )}
-                                                            </div>
 
-                                                            {/* Right Injection Slot */}
-                                                            <div className="p-8 rounded-3xl bg-black/40 border border-white/5 space-y-5 relative">
-                                                                <div className="flex items-center justify-between">
-                                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Right Sidebar Injection</p>
-                                                                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                                                                </div>
-                                                                <div className="relative">
-                                                                    <select 
-                                                                        className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-5 text-sm font-bold text-white outline-none focus:ring-2 ring-primary/50 appearance-none cursor-pointer"
-                                                                        value={section.right.type}
-                                                                        onChange={(e) => updateSectionLayout(idx, 'right', e.target.value)}
-                                                                    >
-                                                                        <option value="nothing">Disable Sidebar Placement</option>
-                                                                        <option value="brand_ad">Brand Video Asset</option>
-                                                                        <option value="affiliate">Affiliate Link Card</option>
-                                                                    </select>
-                                                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                                        <Video className="h-4 w-4 text-muted-foreground/40" />
-                                                                    </div>
-                                                                </div>
-
-                                                                {section.right.type === 'brand_ad' && (
-                                                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                                                                        <select 
-                                                                            className="w-full bg-primary/10 border border-primary/40 rounded-2xl p-5 text-sm font-black text-primary outline-none mt-3 appearance-none cursor-pointer"
-                                                                            onChange={(e) => {
-                                                                                const item = products.find(p => p.title === e.target.value);
-                                                                                updateSectionLayout(idx, 'right', 'brand_ad', { brand_ad: item });
-                                                                            }}
-                                                                            value={section.right.brand_ad?.title || ""}
-                                                                        >
-                                                                            <option value="" disabled>Link Brand Video</option>
-                                                                            {products.filter(p => p.type === 'brand').map(a => <option key={a.id} value={a.title} className="bg-black text-white">{a.title}</option>)}
-                                                                        </select>
-                                                                    </div>
-                                                                )}
-
-                                                                {section.right.type === 'affiliate' && (
-                                                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                                                                        <select 
-                                                                            className="w-full bg-primary/10 border border-primary/40 rounded-2xl p-5 text-sm font-black text-primary outline-none mt-3 appearance-none cursor-pointer"
-                                                                            onChange={(e) => {
-                                                                                const item = products.find(p => p.title === e.target.value);
-                                                                                updateSectionLayout(idx, 'right', 'affiliate', { affiliate: item });
-                                                                            }}
-                                                                            value={section.right.affiliate?.title || ""}
-                                                                        >
-                                                                            <option value="" disabled>Link Inventory Item</option>
-                                                                            {products.filter(p => p.type === 'affiliate').map(a => <option key={a.id} value={a.title} className="bg-black text-white">{a.title}</option>)}
-                                                                        </select>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-[8px] font-black uppercase text-muted-foreground/40 ml-1">Right Slot</p>
+                                                            <select 
+                                                                className="w-full bg-zinc-900 border border-white/10 rounded-lg h-10 px-3 text-xs font-bold text-white outline-none focus:ring-1 ring-primary/30"
+                                                                value={section.right.type}
+                                                                onChange={(e) => updateSectionLayout(idx, 'right', e.target.value)}
+                                                            >
+                                                                <option value="nothing">None</option>
+                                                                <option value="brand_ad">Brand Video</option>
+                                                                <option value="affiliate">Affiliate</option>
+                                                            </select>
+                                                            {(section.right.type === 'brand_ad' || section.right.type === 'affiliate') && (
+                                                                <select 
+                                                                    className="w-full bg-primary/10 border border-primary/20 rounded-lg h-10 px-3 text-xs font-black text-primary mt-1 outline-none"
+                                                                    onChange={(e) => {
+                                                                        const type = section.right.type;
+                                                                        const item = products.find(p => p.title === e.target.value);
+                                                                        updateSectionLayout(idx, 'right', type, { [type]: item });
+                                                                    }}
+                                                                    value={section.right.brand_ad?.title || section.right.affiliate?.title || ""}
+                                                                >
+                                                                    <option value="" disabled>Link Asset</option>
+                                                                    {products.filter(p => p.type === (section.right.type === 'brand_ad' ? 'brand' : 'affiliate')).map((a, idx) => <option key={a.id || idx} value={a.title} className="bg-black text-white">{a.title}</option>)}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                         
-                                        <div className="pt-10">
-                                            <div className="flex items-center gap-6 p-8 rounded-[2.5rem] bg-primary/5 border border-primary/10">
-                                                <div className="p-4 rounded-2xl bg-primary/10">
-                                                    <Info className="h-6 w-6 text-primary" />
-                                                </div>
-                                                <p className="text-sm text-muted-foreground/60 leading-relaxed font-bold">
-                                                    The Section Orchestrator allows you to surgically inject monetization components alongside specific blog chapters. 
-                                                    The left and right sidebars will dynamically render these assets for a highly conversion-optimized reading experience.
-                                                </p>
-                                            </div>
-                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        </TabsContent>
 
-                    {/* BLOGS LIST TAB */}
-                    {activeTab === "blogs" && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <TabsContent value="blogs" className="space-y-6">
                             <div className="flex flex-col gap-1">
                                 <h1 className="text-3xl font-black tracking-tighter">Content Repository</h1>
                                 <p className="text-sm text-muted-foreground">Manage and optimize your sharded knowledge cluster.</p>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 {publishedBlogs.map((blog) => (
-                                    <div key={blog.id} className="flex items-center gap-6 p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
-                                        <div className="relative h-16 w-16 rounded-2xl overflow-hidden flex-shrink-0 border border-white/5">
+                                    <div key={blog.id} className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
+                                        <div className="relative h-12 w-16 rounded-xl overflow-hidden flex-shrink-0 border border-white/5">
                                             <Image src={blog.thumbnail_url} alt="" fill className="object-cover" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-base leading-tight group-hover:text-primary transition-colors truncate">{blog.title}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-base leading-tight group-hover:text-primary transition-colors truncate">{blog.title}</h3>
+                                                {blog.is_featured && <Star className="h-3 w-3 fill-amber-500 text-amber-500 flex-shrink-0" />}
+                                            </div>
                                             <div className="flex items-center gap-4 mt-2">
                                                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">{blog.category}</span>
                                                 <div className="flex items-center gap-3 text-[9px] font-bold text-muted-foreground/20">
@@ -1416,15 +1462,424 @@ export default function AdminPage() {
                                     </div>
                                 ))}
                                 {publishedBlogs.length === 0 && (
-                                    <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                                    <div className="py-12 text-center border border-dashed border-white/10 rounded-xl">
                                         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/20">Empty Repository</p>
                                     </div>
                                 )}
                             </div>
+                        </TabsContent>
+
+                        <TabsContent value="products" className="space-y-8">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">Affiliate Inventory</h1>
+                                <p className="text-sm text-muted-foreground">Manage your monetized product grid.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-1">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-white/5 pb-4">
+                                            {editingProductId ? "Update Product" : "Add Product"}
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Title</label>
+                                                <Input 
+                                                    value={productForm.title}
+                                                    onChange={(e) => setProductForm({ ...productForm, title: e.target.value, type: 'affiliate' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Affiliate Link</label>
+                                                <Input 
+                                                    value={productForm.link}
+                                                    onChange={(e) => setProductForm({ ...productForm, link: e.target.value })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Product Image URL</label>
+                                                <Input 
+                                                    value={productForm.thumbnail}
+                                                    onChange={(e) => setProductForm({ ...productForm, thumbnail: e.target.value })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                />
+                                            </div>
+                                            <Button onClick={handleUpsertProduct} className="w-full h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest mt-4">
+                                                Save Product
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                </div>
+                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {products.filter(p => p.type === 'affiliate').map((p) => (
+                                        <div key={p.id} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex gap-4">
+                                            <div className="h-12 w-16 rounded-xl overflow-hidden bg-black/40 border border-white/5 flex-shrink-0">
+                                                <Image src={p.thumbnail} alt="" width={64} height={64} className="object-cover h-full w-full" />
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                                <h4 className="text-xs font-bold truncate">{p.title}</h4>
+                                                <div className="flex gap-2">
+                                                    <Button variant="ghost" size="sm" onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="h-7 px-3 text-[9px] font-black uppercase tracking-widest">Edit</Button>
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(p.id)} className="h-7 px-3 text-[9px] font-black uppercase tracking-widest text-red-500/50">Delete</Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </TabsContent>
+
+
+                        <TabsContent value="adsense" className="space-y-10">
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">Google AdSense</h1>
+                                <p className="text-sm text-muted-foreground">Configure your automated monetization units.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-1">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-white/5 pb-4">
+                                            New Ad Unit
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Unit Name</label>
+                                                <Input 
+                                                    value={productForm.title}
+                                                    onChange={(e) => setProductForm({ ...productForm, title: e.target.value, type: 'adsense' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                    placeholder="e.g., Sidebar Banner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Publisher ID</label>
+                                                <Input 
+                                                    value={productForm.publisher_id}
+                                                    onChange={(e) => setProductForm({ ...productForm, publisher_id: e.target.value, type: 'adsense' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                    placeholder="ca-pub-xxxxxxxxxxxx"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Ad Slot ID</label>
+                                                <Input 
+                                                    value={productForm.slot_id}
+                                                    onChange={(e) => setProductForm({ ...productForm, slot_id: e.target.value, type: 'adsense' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                    placeholder="1234567890"
+                                                />
+                                            </div>
+                                            <Button onClick={handleUpsertProduct} className="w-full h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest mt-4">
+                                                Save Ad Unit
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                </div>
+                                <div className="lg:col-span-2 grid grid-cols-1 gap-4">
+                                    {products.filter(p => p.type === 'adsense').map((p) => (
+                                        <div key={p.id} className="p-6 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                                            <div className="flex items-center gap-6">
+                                                <div className="p-4 rounded-xl bg-primary/10">
+                                                    <Globe className="h-6 w-6 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold">{p.title}</h4>
+                                                    <p className="text-[10px] text-muted-foreground/40 mt-1 uppercase tracking-widest font-black">
+                                                        {p.publisher_id} • {p.slot_id}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="ghost" size="sm" onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="h-9 px-4 text-[10px] font-black uppercase tracking-widest">Edit</Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(p.id)} className="h-9 px-4 text-[10px] font-black uppercase tracking-widest text-red-500/50">Delete</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                    )}
+                        </TabsContent>
+
+                        <TabsContent value="brands" className="space-y-10">
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">Brand Collaborations</h1>
+                                <p className="text-sm text-muted-foreground">Manage premium brand video placements and CTAs.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                                <div className="lg:col-span-1">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-white/5 pb-4">
+                                            Campaign Details
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Campaign Name</label>
+                                                <Input 
+                                                    value={productForm.title}
+                                                    onChange={(e) => setProductForm({ ...productForm, title: e.target.value, type: 'brand' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Video URL (or Upload)</label>
+                                                <div className="flex gap-2">
+                                                    <Input 
+                                                        value={productForm.video_url}
+                                                        onChange={(e) => setProductForm({ ...productForm, video_url: e.target.value, type: 'brand' })}
+                                                        className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl flex-1"
+                                                    />
+                                                    <label className="h-12 w-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center cursor-pointer">
+                                                        <Upload className="h-4 w-4 text-muted-foreground" />
+                                                        <input type="file" className="hidden" accept="video/*" onChange={(e) => e.target.files?.[0] && handleAssetUpload(e.target.files[0], 'video')} />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">CTA Text</label>
+                                                <Input 
+                                                    value={productForm.cta_text}
+                                                    onChange={(e) => setProductForm({ ...productForm, cta_text: e.target.value, type: 'brand' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                    placeholder="Explore Now"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">CTA Link</label>
+                                                <Input 
+                                                    value={productForm.cta_link}
+                                                    onChange={(e) => setProductForm({ ...productForm, cta_link: e.target.value, type: 'brand' })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-xs rounded-xl"
+                                                />
+                                            </div>
+                                            <Button onClick={handleUpsertProduct} className="w-full h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest mt-4">
+                                                Launch Campaign
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                </div>
+                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {products.filter(p => p.type === 'brand').map((p) => (
+                                        <div key={p.id} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col gap-4">
+                                            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black/40 border border-white/5">
+                                                <video src={p.video_url} className="h-full w-full object-cover" muted loop autoPlay />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-xs font-bold truncate">{p.title}</h4>
+                                                <p className="text-[10px] text-muted-foreground/40 mt-1 uppercase tracking-widest font-black">{p.cta_text}</p>
+                                            </div>
+                                            <div className="flex gap-2 border-t border-white/5 pt-4">
+                                                <Button variant="ghost" size="sm" onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="flex-1 h-9 text-[10px] font-black uppercase tracking-widest">Edit</Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(p.id)} className="h-9 px-4 text-[10px] font-black uppercase tracking-widest text-red-500/50">Delete</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        </TabsContent>
 
 
+                        <TabsContent value="authors" className="space-y-6">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">Writer Profiles</h1>
+                                <p className="text-sm text-muted-foreground">Manage the intellectual architects of your platform.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Author Form */}
+                                <div className="lg:col-span-1 space-y-6">
+                                    <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 space-y-6">
+                                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary/60 border-b border-white/5 pb-4">
+                                            {editingAuthorId ? "Edit Profile" : "Register Writer"}
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Full Name</label>
+                                                <Input 
+                                                    value={authorForm.name}
+                                                    onChange={(e) => setAuthorForm({ ...authorForm, name: e.target.value })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-sm font-bold rounded-xl"
+                                                    placeholder="e.g., Alex Rivers"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Profession / Title</label>
+                                                <Input 
+                                                    value={authorForm.profession}
+                                                    onChange={(e) => setAuthorForm({ ...authorForm, profession: e.target.value })}
+                                                    className="bg-zinc-900 border-white/10 h-12 text-sm font-bold rounded-xl"
+                                                    placeholder="e.g., Technical Lead"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Author Photo</label>
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="h-24 w-24 rounded-xl overflow-hidden border border-white/10 bg-white/5 relative mx-auto">
+                                                        {authorForm.avatar ? (
+                                                            <Image src={authorForm.avatar} alt="Preview" fill className="object-cover" />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center text-muted-foreground/20">
+                                                                <User className="h-8 w-8" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Input 
+                                                            value={authorForm.avatar}
+                                                            onChange={(e) => setAuthorForm({ ...authorForm, avatar: e.target.value })}
+                                                            className="bg-zinc-900 border-white/10 h-12 text-[10px] rounded-xl flex-1"
+                                                            placeholder="URL or Upload..."
+                                                        />
+                                                        <label className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
+                                                            <Upload className="h-4 w-4 text-primary" />
+                                                            <input 
+                                                                type="file" 
+                                                                className="hidden" 
+                                                                accept="image/*" 
+                                                                onChange={async (e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) {
+                                                                        const formData = new FormData();
+                                                                        formData.append("file", file);
+                                                                        const res = await fetch("/api/blogs/upload-thumbnail", { method: "POST", body: formData });
+                                                                        if (res.ok) {
+                                                                            const data = await res.json();
+                                                                            setAuthorForm({ ...authorForm, avatar: data.url });
+                                                                        }
+                                                                    }
+                                                                }} 
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3 pt-6">
+                                            <Button 
+                                                onClick={handleUpsertAuthor} 
+                                                className="flex-1 h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+                                            >
+                                                {editingAuthorId ? "Update Profile" : "Register Writer"}
+                                            </Button>
+                                            {editingAuthorId && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    onClick={() => { setEditingAuthorId(null); setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" }); }} 
+                                                    className="h-12 px-6 text-[10px] font-black uppercase tracking-widest"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                {/* Author List */}
+                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {authors.map((author, idx) => (
+                                        <div key={author.id || idx} className="p-5 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col justify-between group hover:bg-white/[0.04] hover:border-white/10 transition-all relative overflow-hidden">
+                                            <div className="flex gap-5">
+                                                <div className="h-20 w-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 bg-black/40">
+                                                    {author.avatar ? (
+                                                        <Image src={author.avatar} alt="" width={80} height={80} className="object-cover h-full w-full" />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center">
+                                                            <Users className="h-8 w-8 text-white/5" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 space-y-1">
+                                                    <h4 className="font-black text-lg tracking-tight truncate">{author.name}</h4>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 w-fit px-3 py-1 rounded-full border border-primary/20">
+                                                        {author.profession}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-2 mt-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    onClick={() => { 
+                                                        setEditingAuthorId(author.id); 
+                                                        setAuthorForm({
+                                                            name: author.name,
+                                                            avatar: author.avatar,
+                                                            profession: author.profession || "Intelligence Architect"
+                                                        }); 
+                                                    }} 
+                                                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
+                                                >
+                                                    <Edit3 className="h-4 w-4" />
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    onClick={() => handleDeleteAuthor(author.id)} 
+                                                    className="h-9 w-9 rounded-xl hover:bg-red-500/10 hover:text-red-500 transition-all"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {authors.length === 0 && (
+                                        <div className="col-span-full py-32 text-center border-2 border-dashed border-white/5 rounded-xl">
+                                            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/10">No writers registered yet.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </TabsContent>
+
+                    {/* SETTINGS TAB */}
+                        <TabsContent value="settings" className="space-y-10">
+                             <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black tracking-tighter">System Configuration</h1>
+                                <p className="text-sm text-muted-foreground">Fine-tune the BandhanNova Blogs engine.</p>
+                            </div>
+                            
+                            <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6 w-full">
+                                <h3 className="text-lg font-black tracking-tight mb-8">Maintenance Hub</h3>
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between p-6 rounded-xl bg-black/40 border border-white/5">
+                                        <div>
+                                            <p className="text-sm font-bold text-primary">Database Synchronization</p>
+                                        </div>
+                                        <Button 
+                                            variant="outline" 
+                                            onClick={async () => {
+                                                const res = await fetch("/api/admin/init-db", { method: "POST" });
+                                                if (res.ok) alert("Database synced successfully! 🚀");
+                                            }}
+                                            className="text-[10px] font-black uppercase tracking-widest border-white/10"
+                                        >
+                                            Sync DB
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-6 rounded-xl bg-black/40 border border-white/5">
+                                        <div>
+                                            <p className="text-sm font-bold text-red-500">Purge Blog Cache</p>
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            onClick={() => alert("Cache cleared successfully!")}
+                                            className="text-[10px] font-black uppercase tracking-widest text-red-500/40 hover:bg-red-500/5 hover:text-red-500"
+                                        >
+                                            Purge
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </main>
 

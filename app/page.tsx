@@ -1,7 +1,8 @@
 "use client";
 
 import { Analytics } from "@vercel/analytics/next"
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { BlogHero } from "@/components/blog-hero";
 import { BlogFilters } from "@/components/blog-filters";
 import { BlogGrid } from "@/components/blog-grid";
@@ -11,12 +12,30 @@ import type { Blog } from "@/lib/blog-service";
 import { Github, Twitter, Linkedin, ExternalLink, Globe, ArrowUpRight } from "lucide-react";
 import { Footer } from "@/components/footer";
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Handle URL params for Search focus and Trending tab
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const action = searchParams.get("action");
+
+    if (tab === "trending") {
+      setSortBy("popular");
+      document.getElementById("blogs")?.scrollIntoView({ behavior: "smooth" });
+    } else if (tab === "fresh") {
+      setSortBy("newest");
+    }
+
+    if (action === "search") {
+      document.getElementById("blogs")?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [searchParams]);
 
   // Fetch blogs from API
   useEffect(() => {
@@ -92,3 +111,10 @@ export default function Home() {
   );
 }
 
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <HomeContent />
+    </Suspense>
+  );
+}

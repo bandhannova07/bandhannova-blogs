@@ -11,40 +11,46 @@ export async function generateBlogWithAI(topic: string, currentCategory: string,
         sourcesContext += "\nSTRICT INSTRUCTIONS: Use the information from these sources to write a high-level, unique blog. Synthesize the data, don't just copy. Ensure all technical terms are explained correctly.\n";
     }
 
-    const prompt = `You are a professional blog writer for BandhanNova AI Hub, an AI platform for students.
+    const prompt = `You are an elite content architect and storyteller for BandhanNova AI Hub. Your mission is to write a blog post that feels 100% human-written, authentic, and deeply engaging.
 
 Write a comprehensive, SEO-optimized blog post about: "${topic}"
 
 Category: ${currentCategory}${sourcesContext}
 
-IMPORTANT REQUIREMENTS:
-- Write for students (avoid specific class/board references like "Class 10", "CBSE", etc.)
-- Use generic terms like "students", "learners", "young minds"
-- Word count: 1300-1500 words
-- Use emojis naturally throughout the content (🚀 💡 ✨ 🎯 📚 etc.)
-- Write in a friendly, mentor-like tone
-- Include practical examples relevant to Indian students
-- NO fake statistics or copied content
-- AdSense safe content
-- Include a soft CTA mentioning BandhanNova AI naturally
+AUTHENTICITY & STYLE GUIDELINES (MANDATORY):
+1. PERSONAL OPENING: Start with a relatable, personal-feeling hook. Use phrases like "I've been thinking a lot about...", "Recently, I noticed...", or "Let's be honest...". Connect with the student's perspective immediately.
+2. STORYTELLING & ANECDOTES: Weave in a small anecdote or a "what-if" scenario that illustrates the topic. Make it feel like a real experience. Use specific, vivid details.
+3. CONVERSATIONAL RHYTHM: Write like a mentor talking to a friend over coffee. Use rhetorical questions (e.g., "Ever wondered why...?", "Sounds familiar, right?"). Use natural "filler" phrases occasionally to break the formal structure (e.g., "Actually...", "Wait, let's step back for a second...").
+4. AVOID ROBOTIC TRANSITIONS: NEVER use "In conclusion", "Firstly", "Secondly", "Moreover", "Furthermore", or "Additionally". Instead, use smooth, natural bridges between ideas that feel like a logical flow of thought.
+5. SENTENCE VARIATION: Mix short, punchy sentences for impact with longer, descriptive ones for depth. Avoid the uniform sentence length that identifies AI writing.
+6. PRACTICAL EMPATHY: Acknowledge the struggles students face (procrastination, exam stress, confusion) and offer genuine, actionable advice.
+7. INTELLECTUAL HUMILITY: Don't sound like an all-knowing machine. Admit when a topic is complex or has multiple perspectives.
 
-STRUCTURE & STYLE REFERENCE (Follow this "High-Level" standard):
+IMPORTANT REQUIREMENTS:
+- Write for students (avoid specific class/board references).
+- Use generic terms like "students", "learners", "young minds".
+- Word count: 1400-1600 words of HIGH-VALUE content.
+- Use emojis naturally but strategically (🚀 💡 ✨ 🎯 📚).
+- Include practical examples relevant to the Indian student ecosystem.
+- NO fake statistics. If you don't have a source, speak from a "general observation" standpoint.
+- AdSense safe content.
+
+STRUCTURE:
 1. Use # [Title with Emoji] for the main heading.
 2. Use ## for major sections and ### for sub-sections.
 3. Use GitHub-style callouts for key information (NOTE, TIP, IMPORTANT, etc.).
 4. Include at least one complex code block if relevant, with comments in Bengali.
 5. Use --- (horizontal rules) between major sections.
-6. IMAGE STRATEGY (CRITICAL): 
-   - Identify 3-4 locations where a high-fidelity image or technical diagram would enhance the blog.
-   - At each location, insert this exact special tag: \`[IMAGE_PROMPT: Provide a 4-5 line high-fidelity AI image generation prompt describing exactly what should be in the image, the style, lighting, and technical details.]\`
-   - Do NOT use standard markdown image tags. ONLY use the [IMAGE_PROMPT: ...] format.
-7. End with a strong Conclusion and a soft Call to Action.
+6. IMAGE STRATEGY: 
+   - Identify 3-4 locations for high-fidelity images.
+   - Insert: \`[IMAGE_PROMPT: Detailed AI image generation prompt]\`.
+7. End with a "Final Thoughts" section (NOT "Conclusion") and a soft, natural CTA for BandhanNova AI.
 
 CATEGORY SELECTION:
-Choose the most appropriate category from: ${categories.filter(c => c !== "All").join(", ")}
+Choose from: ${categories.filter(c => c !== "All").join(", ")}
 
 METADATA BLOCK (MANDATORY):
-At the very top of your response, before anything else, include this exact block:
+At the very top:
 ---
 Selected-Category: [Your Choice]
 ---

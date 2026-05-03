@@ -27,6 +27,15 @@ export interface SectionLayout {
     };
 }
 
+export interface Author {
+    id: string;
+    name: string;
+    avatar: string;
+    profession: string;
+    bio: string;
+    created_at: string;
+}
+
 export interface Blog {
     id: string;
     title: string;
@@ -46,6 +55,7 @@ export interface Blog {
     published_at: string;
     updated_at: string;
     view_count: number;
+    is_featured: boolean;
 }
 
 /**
@@ -71,7 +81,8 @@ export async function initDatabase() {
             section_layouts TEXT,
             published_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            view_count INTEGER DEFAULT 0
+            view_count INTEGER DEFAULT 0,
+            is_featured INTEGER DEFAULT 0
         )
     `;
     await executeQuery(query);
@@ -91,12 +102,28 @@ export async function initDatabase() {
         )
     `;
     await executeQuery(productQuery);
+
+    // Create authors table
+    const authorQuery = `
+        CREATE TABLE IF NOT EXISTS authors (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            avatar TEXT,
+            profession TEXT,
+            bio TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    `;
+    await executeQuery(authorQuery);
     
     // Add new columns if they don't exist
     try { await executeQuery('ALTER TABLE blogs ADD COLUMN sources TEXT'); } catch(e) {}
     try { await executeQuery('ALTER TABLE blogs ADD COLUMN affiliate_links TEXT'); } catch(e) {}
     try { await executeQuery('ALTER TABLE blogs ADD COLUMN brand_ads TEXT'); } catch(e) {}
     try { await executeQuery('ALTER TABLE blogs ADD COLUMN section_layouts TEXT'); } catch(e) {}
+    try { await executeQuery('ALTER TABLE blogs ADD COLUMN is_featured INTEGER DEFAULT 0'); } catch(e) {}
+    try { await executeQuery('ALTER TABLE authors ADD COLUMN profession TEXT'); } catch(e) {}
+    try { await executeQuery('ALTER TABLE authors ADD COLUMN bio TEXT'); } catch(e) {}
     
     return true;
 }
@@ -162,7 +189,8 @@ export async function createBlog(blog: Partial<Blog>): Promise<Blog> {
         section_layouts: JSON.stringify(blog.section_layouts || []),
         published_at: now,
         updated_at: now,
-        view_count: 0
+        view_count: 0,
+        is_featured: blog.is_featured ? 1 : 0
     };
 
     const query = `
@@ -170,15 +198,15 @@ export async function createBlog(blog: Partial<Blog>): Promise<Blog> {
             id, title, slug, excerpt, content, category, 
             author_name, author_avatar, thumbnail_url, 
             read_time, tags, sources, affiliate_links, brand_ads, section_layouts,
-            published_at, updated_at, view_count
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            published_at, updated_at, view_count, is_featured
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await executeQuery(query, [
         newBlog.id, newBlog.title, newBlog.slug, newBlog.excerpt, newBlog.content, newBlog.category,
         newBlog.author_name, newBlog.author_avatar, newBlog.thumbnail_url,
         newBlog.read_time, newBlog.tags, newBlog.sources, newBlog.affiliate_links, newBlog.brand_ads, newBlog.section_layouts,
-        newBlog.published_at, newBlog.updated_at, newBlog.view_count
+        newBlog.published_at, newBlog.updated_at, newBlog.view_count, newBlog.is_featured
     ]);
 
     // Invalidate cache
@@ -241,6 +269,7 @@ function parseBlogRow(row: any): Blog {
         affiliate_links: JSON.parse(String(row.affiliate_links || '[]')),
         brand_ads: JSON.parse(String(row.brand_ads || '[]')),
         section_layouts: JSON.parse(String(row.section_layouts || '[]')),
+        is_featured: Boolean(row.is_featured)
     };
 }
 
@@ -257,9 +286,84 @@ export async function getBlogsByCategory(category: string): Promise<Blog[]> {
     }
 }
 
+// --- Author Management ---
+
+export async function getAllAuthors(): Promise<Author[]> {
+    try {
+        const results = await executeQuery('SELECT * FROM authors ORDER BY created_at DESC');
+        return results as unknown as Author[];
+    } catch (error) {
+        console.error('Failed to fetch authors:', error);
+        return [];
+    }
+}
+
+export async function createAuthor(author: Partial<Author>): Promise<Author> {
+    const id = Math.random().toString(36).substring(7);
+    const now = new Date().toISOString();
+    
+    const newAuthor = {
+        id,
+        name: author.name || 'Anonymous Writer',
+        avatar: author.avatar || '',
+        profession: author.profession || 'Intelligence Architect',
+        bio: author.bio || '',
+        created_at: now
+    };
+
+    const query = `
+        INSERT INTO authors (id, name, avatar, profession, bio, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    await executeQuery(query, [
+        newAuthor.id, newAuthor.name, newAuthor.avatar, newAuthor.profession, 
+        newAuthor.bio, newAuthor.created_at
+    ]);
+
+    return newAuthor;
+}
+
+export async function updateAuthor(id: string, updates: Partial<Author>): Promise<Author> {
+    const setClauses: string[] = [];
+    const params: any[] = [];
+    
+    Object.entries(updates).forEach(([key, value]) => {
+        if (key === 'id') return;
+        setClauses.push(`${key} = ?`);
+        params.push(value);
+    });
+    
+    params.push(id);
+    const query = `UPDATE authors SET ${setClauses.join(', ')} WHERE id = ?`;
+    await executeQuery(query, params);
+
+    const results = await executeQuery('SELECT * FROM authors WHERE id = ?', [id]);
+    const row = results[0] as any;
+    if (!row) throw new Error(`Author with id ${id} not found`);
+    
+    return row as unknown as Author;
+}
+
+export async function deleteAuthor(id: string): Promise<void> {
+    await executeQuery('DELETE FROM authors WHERE id = ?', [id]);
+}
+
+export async function getAuthorByName(name: string): Promise<Author | null> {
+    try {
+        const results = await executeQuery('SELECT * FROM authors WHERE name = ? LIMIT 1', [name]);
+        if (results.length === 0) return null;
+        return results[0] as unknown as Author;
+    } catch (error) {
+        console.error(`Failed to fetch author with name ${name}:`, error);
+        return null;
+    }
+}
+
 // Increment view count
 export async function incrementViewCount(id: string): Promise<void> {
     await executeQuery('UPDATE blogs SET view_count = view_count + 1 WHERE id = ?', [id]);
+    await deleteCache('all_blogs');
 }
 
 // Get latest blogs

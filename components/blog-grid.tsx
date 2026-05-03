@@ -44,6 +44,12 @@ export function BlogGrid({ posts, loading = false }: BlogGridProps) {
                 <p className="text-muted-foreground max-w-md mx-auto font-medium">
                     Try adjusting your filters or search query.
                 </p>
+                <button 
+                    onClick={() => window.location.href = '/'}
+                    className="mt-4 px-8 py-3 bg-primary/10 text-primary rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all"
+                >
+                    Clear All & Refresh
+                </button>
             </motion.div>
         );
     }

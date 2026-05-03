@@ -138,5 +138,6 @@ Visit our **Resources** section or use our **AI Workspace** to begin your first 
     section_layouts: [],
     published_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    view_count: 1542
+    view_count: 1542,
+    is_featured: true
 };

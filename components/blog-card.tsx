@@ -8,6 +8,7 @@ import { Calendar, Clock, ArrowUpRight, User } from "lucide-react";
 import { format } from "date-fns";
 import type { Blog } from "@/lib/blog-service";
 import { motion } from "framer-motion";
+import { inlineMarkdownToHtml } from "@/lib/markdown-utils";
 
 interface BlogCardProps {
     post: Blog;
@@ -23,7 +24,7 @@ export function BlogCard({ post }: BlogCardProps) {
     return (
         <Card
             onClick={handleClick}
-            className="group relative h-full overflow-hidden border-0 cursor-pointer glass-card bg-background/50 backdrop-blur-md transition-all duration-300 rounded-[2rem] shadow-xl hover:-translate-y-2"
+            className="group relative h-full overflow-hidden border-0 cursor-pointer glass-card bg-background/50 backdrop-blur-md transition-all duration-300 rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1),0_-5px_20px_-10px_rgba(0,0,0,0.05)] dark:shadow-2xl hover:-translate-y-2"
         >
             <CardHeader className="p-0 relative overflow-hidden h-48 md:h-56">
                 <Image
@@ -53,14 +54,15 @@ export function BlogCard({ post }: BlogCardProps) {
                         {post.read_time} min
                     </span>
                 </div>
+                <h3 
+                    className="text-lg md:text-xl font-black leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(post.title) }}
+                />
 
-                <h3 className="text-lg md:text-xl font-black leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2">
-                    {post.title}
-                </h3>
-
-                <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 font-medium leading-relaxed transition-colors duration-300">
-                    {post.excerpt}
-                </p>
+                <p 
+                    className="text-xs md:text-sm text-muted-foreground line-clamp-2 font-medium leading-relaxed transition-colors duration-300"
+                    dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(post.excerpt) }}
+                />
             </CardContent>
 
             <CardFooter className="px-4 md:px-6 pb-4 md:pb-6 pt-0 flex items-center justify-between mt-auto">
