@@ -33,7 +33,10 @@ import {
     Briefcase,
     Clock as ClockIcon,
     Brain as BrainIcon,
-    Image as ImageIcon
+    Image as ImageIcon,
+    CheckCircle2,
+    AlertCircle,
+    Bell
 } from "lucide-react";
 import { categories } from "@/lib/blog-data";
 import Image from "next/image";
@@ -49,14 +52,14 @@ import {
     TabsList, 
     TabsTrigger 
 } from "@/components/ui/tabs";
-import { 
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { motion, AnimatePresence } from "framer-motion";
 
+
+interface Notification {
+    id: number;
+    message: string;
+    type: "success" | "error" | "info";
+}
 
 export default function AdminPage() {
     const router = useRouter();
@@ -64,9 +67,27 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
 
+    // Notifications state
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+
+    const addNotification = (message: string, type: "success" | "error" | "info" = "success") => {
+        const id = Date.now();
+        setNotifications(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 4000);
+    };
+
+    // Action loading states
+    const [isSavingAuthor, setIsSavingAuthor] = useState(false);
+    const [isSavingProduct, setIsSavingProduct] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+
     // Blog generation states
     const [topic, setTopic] = useState("");
-    const [category, setCategory] = useState(""); // Default empty for auto-selection
+    const [category, setCategory] = useState("");
     const [thumbnail, setThumbnail] = useState<File | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState("");
     const [showCropper, setShowCropper] = useState(false);
@@ -91,14 +112,7 @@ export default function AdminPage() {
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
 
-    // Image Prompt States
-    const [placeholderImages, setPlaceholderImages] = useState<Record<string, string>>({});
-    const [uploadingPlaceholder, setUploadingPlaceholder] = useState<string | null>(null);
-
-    // Simplified Source Context
-    const [sources, setSources] = useState<string[]>([""]);
-
-    // Products & AdSense states
+    // Products states
     const [products, setProducts] = useState<any[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -115,36 +129,6 @@ export default function AdminPage() {
     });
 
     const [uploadingAsset, setUploadingAsset] = useState(false);
-
-    const handleAssetUpload = async (file: File, type: "image" | "video") => {
-        setUploadingAsset(true);
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("type", type === "video" ? "brand_video" : "product_image");
-
-            const response = await fetch("/api/upload", {
-                method: "POST",
-                body: formData
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (type === "video") {
-                    setProductForm(prev => ({ ...prev, video_url: data.url }));
-                } else {
-                    setProductForm(prev => ({ ...prev, thumbnail: data.url }));
-                }
-            } else {
-                alert("Upload failed. Please check server logs.");
-            }
-        } catch (error) {
-            console.error("Asset upload failed:", error);
-            alert("Upload error occurred.");
-        } finally {
-            setUploadingAsset(false);
-        }
-    };
 
     // Section Layout Orchestrator States
     const [sectionLayouts, setSectionLayouts] = useState<any[]>([]);
@@ -244,9 +228,10 @@ export default function AdminPage() {
 
     const handleUpsertAuthor = async () => {
         if (!authorForm.name) {
-            alert("Please enter the writer's name.");
+            addNotification("Please enter writer name", "error");
             return;
         }
+        setIsSavingAuthor(true);
         try {
             const url = editingAuthorId ? `/api/authors/${editingAuthorId}` : "/api/authors";
             const method = editingAuthorId ? "PUT" : "POST";
@@ -261,29 +246,32 @@ export default function AdminPage() {
                 setEditingAuthorId(null);
                 setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" });
                 fetchAuthors();
-                alert(editingAuthorId ? "Profile updated! ✨" : "Writer registered! ✨");
+                addNotification(editingAuthorId ? "Profile updated! ✨" : "Writer registered! ✨");
             } else {
-                const errorData = await response.json();
-                alert(`Failed to save author: ${errorData.error || "Unknown error"}`);
+                addNotification("Failed to save author", "error");
             }
         } catch (error: any) {
-            console.error("Error saving author:", error);
-            alert(`Error saving author: ${error.message}`);
+            addNotification("Error saving author", "error");
+        } finally {
+            setIsSavingAuthor(false);
         }
     };
 
     const handleDeleteAuthor = async (id: string) => {
         if (!confirm("Delete this writer profile?")) return;
+        setIsDeleting(id);
         try {
             const response = await fetch(`/api/authors/${id}`, { method: "DELETE" });
             if (response.ok) {
                 fetchAuthors();
-                alert("Writer profile deleted.");
+                addNotification("Writer profile deleted.");
             } else {
-                alert("Failed to delete writer.");
+                addNotification("Failed to delete writer", "error");
             }
         } catch (error) {
             console.error("Error deleting author:", error);
+        } finally {
+            setIsDeleting(null);
         }
     };
 
@@ -304,7 +292,7 @@ export default function AdminPage() {
                     isFeatured,
                     author_name: authorName,
                     author_avatar: authorAvatarPreview,
-                    sources: sources.filter(s => s.trim() !== ""),
+                    sources: [""],
                     layouts: sectionLayouts
                 }),
             });
@@ -319,16 +307,26 @@ export default function AdminPage() {
                     title: data.blog.title
                 });
                 setSectionLayouts(data.blog.layouts || []);
+                addNotification("Blog architected successfully! 🧠");
             }
         } catch (error) {
-            console.error("Generation failed:", error);
+            addNotification("Generation failed", "error");
         } finally {
             setGenerating(false);
         }
     };
 
     const handlePublish = async () => {
-        if (!generatedBlog || !metadata) return;
+        if (!generatedBlog) {
+            addNotification("No content to publish!", "error");
+            return;
+        }
+        if (!metadata) {
+            addNotification("Blog metadata missing!", "error");
+            return;
+        }
+        
+        setIsPublishing(true);
 
         try {
             const blogData = {
@@ -342,7 +340,7 @@ export default function AdminPage() {
                 thumbnail_url: thumbnailPreview,
                 is_featured: isFeatured,
                 tags: metadata.tags,
-                layouts: sectionLayouts
+                section_layouts: sectionLayouts
             };
 
             const url = editingBlogId ? `/api/blogs/${editingBlogId}` : "/api/blogs";
@@ -355,7 +353,7 @@ export default function AdminPage() {
             });
 
             if (response.ok) {
-                alert(editingBlogId ? "Blog updated successfully!" : "Blog published successfully!");
+                addNotification(editingBlogId ? "Blog updated successfully! 🚀" : "Blog published to production! 🚀");
                 setTopic("");
                 setGeneratedBlog("");
                 setMetadata(null);
@@ -364,9 +362,14 @@ export default function AdminPage() {
                 setSectionLayouts([]);
                 fetchPublishedBlogs();
                 setActiveTab("blogs");
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                addNotification(errorData.error || "Failed to process request", "error");
             }
         } catch (error) {
-            console.error("Publishing failed:", error);
+            addNotification("Network error occurred during publishing", "error");
+        } finally {
+            setIsPublishing(false);
         }
     };
 
@@ -384,8 +387,10 @@ export default function AdminPage() {
             excerpt: blog.excerpt,
             tags: blog.tags
         });
-        setSectionLayouts((blog as any).layouts || []);
+        // Correctly map from section_layouts which is what the backend returns
+        setSectionLayouts(blog.section_layouts || []);
         setActiveTab("generate");
+        addNotification("Loaded blog for editing", "info");
     };
 
     const updateSectionLayout = (index: number, side: 'left' | 'right', type: any, data: any = {}) => {
@@ -400,9 +405,47 @@ export default function AdminPage() {
         });
     };
 
+    const syncSections = () => {
+        if (!generatedBlog) {
+            addNotification("No content to sync!", "error");
+            return;
+        }
+        
+        // Find all ## Headings (standard for sections in this blog system)
+        const headingRegex = /^##\s+(.+)$/gm;
+        const matches = Array.from(generatedBlog.matchAll(headingRegex));
+        const newHeadings = matches.map(m => m[1].trim());
+        
+        if (newHeadings.length === 0) {
+            addNotification("No sections found! Use ## Headings to define sections.", "info");
+            return;
+        }
+
+        setSectionLayouts(prev => {
+            const updated = newHeadings.map((heading, i) => {
+                // Try to find existing layout with same heading or at same index
+                const existing = prev.find(l => l.heading === heading) || prev[i];
+                
+                if (existing) {
+                    return { ...existing, heading }; // keep existing assignments, update heading text
+                }
+                
+                return {
+                    heading,
+                    left: { type: "nothing" },
+                    right: { type: "nothing" }
+                };
+            });
+            return updated;
+        });
+        
+        addNotification(`Orchestrator synced with ${newHeadings.length} sections! 🧩`);
+    };
+
     const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            addNotification("Processing thumbnail...", "info");
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImageToCrop(reader.result as string);
@@ -422,7 +465,10 @@ export default function AdminPage() {
             setThumbnail(croppedFile);
 
             const reader = new FileReader();
-            reader.onloadend = () => setThumbnailPreview(reader.result as string);
+            reader.onloadend = () => {
+                setThumbnailPreview(reader.result as string);
+                addNotification("Thumbnail optimized! 🖼️");
+            };
             reader.readAsDataURL(croppedBlob);
         } else {
             setUploadingAvatar(true);
@@ -436,12 +482,12 @@ export default function AdminPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setAuthorForm(prev => ({ ...prev, avatar: data.url }));
+                    addNotification("Avatar uploaded! 📸");
                 } else {
-                    alert("Failed to upload avatar");
+                    addNotification("Failed to upload avatar", "error");
                 }
             } catch (error) {
-                console.error("Avatar upload failed:", error);
-                alert("Error uploading avatar");
+                addNotification("Error uploading avatar", "error");
             } finally {
                 setUploadingAvatar(false);
             }
@@ -451,6 +497,7 @@ export default function AdminPage() {
     const handleAuthorAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            addNotification("Processing avatar...", "info");
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImageToCrop(reader.result as string);
@@ -463,9 +510,10 @@ export default function AdminPage() {
 
     const handleUpsertProduct = async () => {
         if (!productForm.title) {
-            alert("Please enter a title for the asset.");
+            addNotification("Enter asset title", "error");
             return;
         }
+        setIsSavingProduct(true);
         try {
             const response = await fetch("/api/products", {
                 method: "POST",
@@ -476,33 +524,38 @@ export default function AdminPage() {
                 setEditingProductId(null);
                 setProductForm({ type: "affiliate", title: "", thumbnail: "", link: "", video_url: "", cta_text: "", cta_link: "", publisher_id: "", slot_id: "" });
                 fetchProducts();
-                alert(editingProductId ? "Asset updated! ✨" : "Asset registered! ✨");
+                addNotification(editingProductId ? "Asset updated! ✨" : "Asset registered! ✨");
             } else {
-                alert("Failed to save asset.");
+                addNotification("Failed to save asset", "error");
             }
         } catch (error) {
-            console.error("Error saving product:", error);
+            addNotification("Error saving product", "error");
+        } finally {
+            setIsSavingProduct(false);
         }
     };
 
     const handleDeleteProduct = async (id: string) => {
         if (!confirm("Delete this product?")) return;
+        setIsDeleting(id);
         try {
             const response = await fetch(`/api/products?id=${id}`, { method: "DELETE" });
             if (response.ok) {
                 fetchProducts();
-                alert("Asset deleted.");
+                addNotification("Asset deleted.");
             } else {
-                alert("Failed to delete asset.");
+                addNotification("Failed to delete asset", "error");
             }
         } catch (error) {
-            console.error("Error deleting product:", error);
+            addNotification("Error deleting product", "error");
+        } finally {
+            setIsDeleting(null);
         }
     };
 
     const handleDeleteBlog = async (id: string, title: string) => {
         if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
-
+        setIsDeleting(id);
         try {
             const response = await fetch(`/api/blogs/${id}`, {
                 method: "DELETE",
@@ -510,10 +563,42 @@ export default function AdminPage() {
 
             if (!response.ok) throw new Error("Failed to delete blog");
 
-            alert("Blog deleted successfully!");
+            addNotification("Blog deleted successfully!");
             fetchPublishedBlogs();
         } catch (error) {
-            console.error("Error deleting blog:", error);
+            addNotification("Error deleting blog", "error");
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
+    const handleAssetUpload = async (file: File, type: "image" | "video") => {
+        setUploadingAsset(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("type", type === "video" ? "brand_video" : "product_image");
+
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (type === "video") {
+                    setProductForm(prev => ({ ...prev, video_url: data.url }));
+                } else {
+                    setProductForm(prev => ({ ...prev, thumbnail: data.url }));
+                }
+                addNotification("Asset uploaded successfully! 📁");
+            } else {
+                addNotification("Upload failed", "error");
+            }
+        } catch (error) {
+            addNotification("Upload error occurred", "error");
+        } finally {
+            setUploadingAsset(false);
         }
     };
 
@@ -532,6 +617,34 @@ export default function AdminPage() {
 
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-primary/30">
+            {/* Toast Notifications */}
+            <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+                <AnimatePresence>
+                    {notifications.map((n) => (
+                        <motion.div
+                            key={n.id}
+                            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                            className={cn(
+                                "pointer-events-auto px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 min-w-[320px] backdrop-blur-xl",
+                                n.type === "success" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-500",
+                                n.type === "error" && "bg-red-500/10 border-red-500/20 text-red-500",
+                                n.type === "info" && "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                            )}
+                        >
+                            {n.type === "success" && <CheckCircle2 className="h-5 w-5" />}
+                            {n.type === "error" && <AlertCircle className="h-5 w-5" />}
+                            {n.type === "info" && <Bell className="h-5 w-5" />}
+                            <span className="text-[11px] font-black uppercase tracking-wider">{n.message}</span>
+                            <button onClick={() => setNotifications(prev => prev.filter(notif => notif.id !== n.id))} className="ml-auto opacity-40 hover:opacity-100">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
+
             <AdminSidebar 
                 activeTab={activeTab} 
                 onTabChange={(tab) => {
@@ -642,6 +755,22 @@ export default function AdminPage() {
                                 <h1 className="text-3xl font-black tracking-tighter">
                                     {editingBlogId ? "Edit Intelligence" : "AI Generator"}
                                 </h1>
+                                {editingBlogId && (
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={() => {
+                                            setEditingBlogId(null);
+                                            setTopic("");
+                                            setGeneratedBlog("");
+                                            setMetadata(null);
+                                            setSectionLayouts([]);
+                                            addNotification("Reset to generator", "info");
+                                        }}
+                                        className="rounded-xl border-white/10 text-[10px] font-black uppercase tracking-widest"
+                                    >
+                                        New Blog
+                                    </Button>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -723,10 +852,120 @@ export default function AdminPage() {
                                                     <h3 className="text-xl font-black tracking-tighter">Draft Review</h3>
                                                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[8px] font-black tracking-widest">AI ARCHITECTED</Badge>
                                                 </div>
-                                                <Button onClick={handlePublish} className="rounded-xl bg-primary px-8 font-black uppercase tracking-widest text-[10px] shadow-lg h-11">
-                                                    {editingBlogId ? "Update Content" : "Publish to Production"}
+                                                <Button 
+                                                    onClick={handlePublish} 
+                                                    disabled={isPublishing}
+                                                    className="rounded-xl bg-primary px-8 font-black uppercase tracking-widest text-[10px] shadow-lg h-11"
+                                                >
+                                                    {isPublishing ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                            <span>{editingBlogId ? "Updating..." : "Publishing..."}</span>
+                                                        </div>
+                                                    ) : (
+                                                        editingBlogId ? "Update Content" : "Publish to Production"
+                                                    )}
                                                 </Button>
                                             </div>
+
+                                            {/* Section Orchestrator for current blog */}
+                                            <Card className="bg-white/[0.02] border-white/5 p-6 rounded-xl space-y-6">
+                                                <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                                                            <Layout className="h-6 w-6 text-primary" />
+                                                        </div>
+                                                        <h4 className="text-xl font-black tracking-tighter">Section Orchestrator</h4>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            onClick={syncSections}
+                                                            className="h-11 px-4 rounded-xl bg-white/5 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 flex items-center gap-2"
+                                                        >
+                                                            <RefreshCw className="h-3 w-3" />
+                                                            Sync Sections
+                                                        </Button>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            onClick={() => setShowProductManager(!showProductManager)}
+                                                            className={cn(
+                                                                "h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                                                                showProductManager ? "bg-primary text-white" : "bg-white/5"
+                                                            )}
+                                                        >
+                                                            {showProductManager ? "Close Asset Manager" : "Manage Products"}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    {sectionLayouts.length === 0 && (
+                                                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest text-center py-8 opacity-40">No monetization slots available for this draft.</p>
+                                                    )}
+                                                    {sectionLayouts.map((section, idx) => (
+                                                        <div key={idx} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col md:flex-row md:items-center gap-4">
+                                                            <div className="w-full md:w-48">
+                                                                <p className="text-[10px] font-black uppercase text-primary mb-1">Section {idx + 1}</p>
+                                                                <p className="text-xs font-bold text-white truncate">{section.heading}</p>
+                                                            </div>
+                                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[8px] font-black uppercase text-muted-foreground/40 ml-1">Left Slot</p>
+                                                                    <select 
+                                                                        className="w-full bg-zinc-900 border border-white/10 rounded-lg h-10 px-3 text-xs font-bold text-white outline-none focus:ring-1 ring-primary/30"
+                                                                        value={section.left.type}
+                                                                        onChange={(e) => updateSectionLayout(idx, 'left', e.target.value)}
+                                                                    >
+                                                                        <option value="nothing">None</option>
+                                                                        <option value="affiliate">Affiliate</option>
+                                                                    </select>
+                                                                    {section.left.type === 'affiliate' && (
+                                                                        <select 
+                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg h-10 px-3 text-xs font-black text-primary mt-1 outline-none"
+                                                                            onChange={(e) => {
+                                                                                const item = products.find(p => p.title === e.target.value);
+                                                                                updateSectionLayout(idx, 'left', 'affiliate', { affiliate: item });
+                                                                            }}
+                                                                            value={section.left.affiliate?.title || ""}
+                                                                        >
+                                                                            <option value="" disabled>Link Item</option>
+                                                                            {products.filter(p => p.type === 'affiliate').map((a, idx) => <option key={a.id || idx} value={a.title} className="bg-black text-white">{a.title}</option>)}
+                                                                        </select>
+                                                                    )}
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-[8px] font-black uppercase text-muted-foreground/40 ml-1">Right Slot</p>
+                                                                    <select 
+                                                                        className="w-full bg-zinc-900 border border-white/10 rounded-lg h-10 px-3 text-xs font-bold text-white outline-none focus:ring-1 ring-primary/30"
+                                                                        value={section.right.type}
+                                                                        onChange={(e) => updateSectionLayout(idx, 'right', e.target.value)}
+                                                                    >
+                                                                        <option value="nothing">None</option>
+                                                                        <option value="brand_ad">Brand Video</option>
+                                                                        <option value="affiliate">Affiliate</option>
+                                                                    </select>
+                                                                    {(section.right.type === 'brand_ad' || section.right.type === 'affiliate') && (
+                                                                        <select 
+                                                                            className="w-full bg-primary/10 border border-primary/20 rounded-lg h-10 px-3 text-xs font-black text-primary mt-1 outline-none"
+                                                                            onChange={(e) => {
+                                                                                const type = section.right.type;
+                                                                                const item = products.find(p => p.title === e.target.value);
+                                                                                updateSectionLayout(idx, 'right', type, { [type]: item });
+                                                                            }}
+                                                                            value={section.right.brand_ad?.title || section.right.affiliate?.title || ""}
+                                                                        >
+                                                                            <option value="" disabled>Link Asset</option>
+                                                                            {products.filter(p => p.type === (section.right.type === 'brand_ad' ? 'brand' : 'affiliate')).map((a, idx) => <option key={a.id || idx} value={a.title} className="bg-black text-white">{a.title}</option>)}
+                                                                        </select>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </Card>
+
                                             <Card className="bg-white/[0.01] rounded-xl p-8 border border-white/5 relative group">
                                                 {editMode ? (
                                                     <textarea
@@ -781,6 +1020,20 @@ export default function AdminPage() {
                                                 ))}
                                             </div>
                                         </div>
+                                        <div className="pt-4">
+                                            <button 
+                                                onClick={() => setIsFeatured(!isFeatured)}
+                                                className={cn(
+                                                    "w-full h-12 rounded-xl border flex items-center justify-center gap-2 transition-all",
+                                                    isFeatured 
+                                                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500" 
+                                                        : "bg-white/[0.02] border-white/5 text-muted-foreground/40"
+                                                )}
+                                            >
+                                                <Star className={cn("h-4 w-4", isFeatured && "fill-amber-500")} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{isFeatured ? "Featured Content" : "Mark as Featured"}</span>
+                                            </button>
+                                        </div>
                                     </Card>
                                 </div>
                             </div>
@@ -789,7 +1042,6 @@ export default function AdminPage() {
                         <TabsContent value="authors" className="space-y-6">
                             <div className="flex flex-col gap-1">
                                 <h1 className="text-3xl font-black tracking-tighter">Writer Profiles</h1>
-                                <p className="text-sm text-muted-foreground">Manage the intellectual architects of your platform.</p>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -805,124 +1057,73 @@ export default function AdminPage() {
                                                     value={authorForm.name}
                                                     onChange={(e) => setAuthorForm({ ...authorForm, name: e.target.value })}
                                                     className="bg-zinc-900 border-white/10 h-12 text-sm font-bold rounded-xl"
-                                                    placeholder="e.g., Alex Rivers"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Profession / Title</label>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Profession</label>
                                                 <Input 
                                                     value={authorForm.profession}
                                                     onChange={(e) => setAuthorForm({ ...authorForm, profession: e.target.value })}
                                                     className="bg-zinc-900 border-white/10 h-12 text-sm font-bold rounded-xl"
-                                                    placeholder="e.g., Technical Lead"
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Author Photo</label>
-                                                <div className="flex flex-col gap-4">
-                                                    <div className="h-24 w-24 rounded-xl overflow-hidden border border-white/10 bg-white/5 relative mx-auto group">
-                                                        {authorForm.avatar ? (
-                                                            <Image src={authorForm.avatar} alt="Preview" fill className="object-cover" />
-                                                        ) : (
-                                                            <div className="h-full w-full flex items-center justify-center text-muted-foreground/20">
-                                                                <User className="h-8 w-8" />
-                                                            </div>
-                                                        )}
-                                                        {uploadingAvatar && (
-                                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                                                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <Input 
-                                                            value={authorForm.avatar}
-                                                            onChange={(e) => setAuthorForm({ ...authorForm, avatar: e.target.value })}
-                                                            className="bg-zinc-900 border-white/10 h-12 text-[10px] rounded-xl flex-1"
-                                                            placeholder="URL or Upload..."
-                                                        />
-                                                        <label className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
-                                                            {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Upload className="h-4 w-4 text-primary" />}
-                                                            <input 
-                                                                type="file" 
-                                                                className="hidden" 
-                                                                accept="image/*" 
-                                                                onChange={handleAuthorAvatarChange} 
-                                                            />
-                                                        </label>
-                                                    </div>
+                                                <div className="flex gap-2">
+                                                    <Input 
+                                                        value={authorForm.avatar}
+                                                        onChange={(e) => setAuthorForm({ ...authorForm, avatar: e.target.value })}
+                                                        className="bg-zinc-900 border-white/10 h-12 text-[10px] rounded-xl flex-1"
+                                                    />
+                                                    <label className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
+                                                        {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Upload className="h-4 w-4 text-primary" />}
+                                                        <input type="file" className="hidden" accept="image/*" onChange={handleAuthorAvatarChange} />
+                                                    </label>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div className="flex flex-col sm:flex-row gap-3 pt-6">
-                                            <Button 
-                                                onClick={handleUpsertAuthor} 
-                                                disabled={uploadingAvatar}
-                                                className="flex-1 h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
-                                            >
-                                                {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                                {editingAuthorId ? "Update Profile" : "Register Writer"}
-                                            </Button>
-                                            {editingAuthorId && (
-                                                <Button 
-                                                    variant="ghost" 
-                                                    onClick={() => { setEditingAuthorId(null); setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" }); }} 
-                                                    className="h-12 px-6 text-[10px] font-black uppercase tracking-widest"
-                                                >
-                                                    Cancel
-                                                </Button>
+                                        <Button 
+                                            onClick={handleUpsertAuthor} 
+                                            disabled={isSavingAuthor}
+                                            className="w-full h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest"
+                                        >
+                                            {isSavingAuthor ? (
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <span>Saving Profile...</span>
+                                                </div>
+                                            ) : (
+                                                editingAuthorId ? "Update Profile" : "Register Writer"
                                             )}
-                                        </div>
+                                        </Button>
                                     </Card>
                                 </div>
 
                                 <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {authors.map((author, idx) => (
-                                        <div key={author.id || idx} className="p-5 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col justify-between group hover:bg-white/[0.04] hover:border-white/10 transition-all relative overflow-hidden">
+                                    {authors.map((author) => (
+                                        <div key={author.id} className="p-5 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col justify-between group hover:bg-white/[0.04] transition-all">
                                             <div className="flex gap-5">
-                                                <div className="h-20 w-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 bg-black/40 relative">
+                                                <div className="h-20 w-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 relative">
                                                     {author.avatar ? <Image src={author.avatar} alt="" fill className="object-cover" /> : <User className="h-8 w-8 text-white/10" />}
                                                 </div>
-                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                <div className="flex-1 min-w-0">
                                                     <h4 className="font-black text-lg tracking-tight truncate">{author.name}</h4>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 w-fit px-3 py-1 rounded-full border border-primary/20 mt-2">
-                                                        {author.profession}
-                                                    </p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary mt-2">{author.profession}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-end gap-2 mt-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2 mt-6">
+                                                <Button variant="ghost" size="icon" onClick={() => { setEditingAuthorId(author.id); setAuthorForm(author); }}><Edit3 className="h-4 w-4" /></Button>
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => { 
-                                                        setEditingAuthorId(author.id); 
-                                                        setAuthorForm({
-                                                            name: author.name,
-                                                            avatar: author.avatar,
-                                                            profession: author.profession || "Intelligence Architect"
-                                                        }); 
-                                                    }} 
-                                                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
+                                                    disabled={isDeleting === author.id}
+                                                    onClick={() => handleDeleteAuthor(author.id)}
                                                 >
-                                                    <Edit3 className="h-4 w-4" />
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => handleDeleteAuthor(author.id)} 
-                                                    className="h-9 w-9 rounded-xl hover:bg-red-500/10 hover:text-red-500 transition-all"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    {isDeleting === author.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                                 </Button>
                                             </div>
                                         </div>
                                     ))}
-                                    {authors.length === 0 && (
-                                        <div className="col-span-full py-32 text-center border-2 border-dashed border-white/5 rounded-xl">
-                                            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/10">No writers registered yet.</p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </TabsContent>
@@ -930,7 +1131,6 @@ export default function AdminPage() {
                         <TabsContent value="blogs" className="space-y-6">
                             <div className="flex flex-col gap-1">
                                 <h1 className="text-3xl font-black tracking-tighter">Content Repository</h1>
-                                <p className="text-sm text-muted-foreground">Manage and optimize your sharded knowledge cluster.</p>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {publishedBlogs.map((blog) => (
@@ -946,7 +1146,15 @@ export default function AdminPage() {
                                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                                 <div className="flex gap-2">
                                                     <Button variant="ghost" size="sm" onClick={() => handleEditBlog(blog)} className="h-8 px-3 text-[10px] font-black uppercase tracking-widest">Edit</Button>
-                                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteBlog(blog.id, blog.title)} className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-red-500/50">Delete</Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        disabled={isDeleting === blog.id}
+                                                        onClick={() => handleDeleteBlog(blog.id, blog.title)} 
+                                                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-red-500/50"
+                                                    >
+                                                        {isDeleting === blog.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Delete"}
+                                                    </Button>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-muted-foreground/40">
                                                     <Eye className="h-3 w-3" />
@@ -962,7 +1170,6 @@ export default function AdminPage() {
                         <TabsContent value="products" className="space-y-6">
                             <div className="flex flex-col gap-1">
                                 <h1 className="text-3xl font-black tracking-tighter">Asset Inventory</h1>
-                                <p className="text-sm text-muted-foreground">Manage monetization links and brand visual assets.</p>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -974,7 +1181,7 @@ export default function AdminPage() {
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Type</label>
                                             <select 
-                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl p-4 text-xs font-bold text-white"
+                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl p-4 text-xs font-bold text-white outline-none"
                                                 value={productForm.type}
                                                 onChange={(e) => setProductForm({ ...productForm, type: e.target.value as any })}
                                             >
@@ -990,8 +1197,19 @@ export default function AdminPage() {
                                                 className="bg-zinc-900 border-white/10 h-12"
                                             />
                                         </div>
-                                        <Button onClick={handleUpsertProduct} className="w-full h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest">
-                                            {editingProductId ? "Save Changes" : "Register Asset"}
+                                        <Button 
+                                            onClick={handleUpsertProduct} 
+                                            disabled={isSavingProduct}
+                                            className="w-full h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest"
+                                        >
+                                            {isSavingProduct ? (
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <span>Saving Asset...</span>
+                                                </div>
+                                            ) : (
+                                                editingProductId ? "Save Changes" : "Register Asset"
+                                            )}
                                         </Button>
                                     </div>
                                 </Card>
@@ -1007,7 +1225,15 @@ export default function AdminPage() {
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button variant="ghost" size="icon" onClick={() => { setEditingProductId(p.id); setProductForm(p); }}><Edit3 className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-red-500/50"><Trash2 className="h-4 w-4" /></Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    disabled={isDeleting === p.id}
+                                                    onClick={() => handleDeleteProduct(p.id)} 
+                                                    className="text-red-500/50"
+                                                >
+                                                    {isDeleting === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -1015,44 +1241,32 @@ export default function AdminPage() {
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="brands" className="space-y-10">
-                            <div className="space-y-10">
-                                <div className="flex flex-col gap-1">
-                                    <h1 className="text-3xl font-black tracking-tighter">Brand Collaborations</h1>
-                                    <p className="text-sm text-muted-foreground">Manage premium brand video placements.</p>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {products.filter(p => p.type === 'brand').map((p) => (
-                                        <Card key={p.id} className="bg-white/[0.02] border-white/5 p-4 space-y-4">
-                                            <div className="aspect-video relative rounded-lg overflow-hidden bg-black/40">
-                                                <video src={p.video_url} className="h-full w-full object-cover" muted loop autoPlay />
-                                            </div>
-                                            <h4 className="text-xs font-bold">{p.title}</h4>
-                                            <div className="flex gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => { setEditingProductId(p.id); setProductForm(p); }} className="flex-1 h-9 text-[10px] font-black uppercase tracking-widest">Edit</Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(p.id)} className="h-9 px-4 text-red-500/50">Delete</Button>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                        </TabsContent>
-
                         <TabsContent value="settings" className="space-y-10">
-                             <div className="flex flex-col gap-1">
-                                <h1 className="text-3xl font-black tracking-tighter">System Configuration</h1>
-                                <p className="text-sm text-muted-foreground">Fine-tune the engine.</p>
-                            </div>
                             <Card className="bg-white/[0.02] border-white/5 rounded-xl p-6">
                                 <Button 
                                     variant="outline" 
+                                    disabled={isSyncing}
                                     onClick={async () => {
-                                        const res = await fetch("/api/admin/init-db", { method: "POST" });
-                                        if (res.ok) alert("Database synced! 🚀");
+                                        setIsSyncing(true);
+                                        addNotification("Starting database sync...", "info");
+                                        try {
+                                            const res = await fetch("/api/admin/init-db", { method: "POST" });
+                                            if (res.ok) addNotification("Database synced! 🚀");
+                                            else addNotification("Sync failed", "error");
+                                        } catch (e) {
+                                            addNotification("Error syncing", "error");
+                                        } finally {
+                                            setIsSyncing(false);
+                                        }
                                     }}
                                     className="text-[10px] font-black uppercase tracking-widest"
                                 >
-                                    Sync DB
+                                    {isSyncing ? (
+                                        <div className="flex items-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            <span>Syncing...</span>
+                                        </div>
+                                    ) : "Sync DB"}
                                 </Button>
                             </Card>
                         </TabsContent>
