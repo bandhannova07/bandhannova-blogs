@@ -56,7 +56,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+
 
 export default function AdminPage() {
     const router = useRouter();
@@ -85,9 +85,10 @@ export default function AdminPage() {
     const [authorForm, setAuthorForm] = useState({
         name: "",
         avatar: "",
-        profession: "Intelligence Architect",
-        bio: ""
+        profession: "Intelligence Architect"
     });
+    const [cropType, setCropType] = useState<"thumbnail" | "avatar">("thumbnail");
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [showSidebar, setShowSidebar] = useState(false);
 
     // Image Prompt States
@@ -214,7 +215,7 @@ export default function AdminPage() {
             });
             if (response.ok) {
                 setEditingAuthorId(null);
-                setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect", bio: "" });
+                setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" });
                 fetchAuthors();
             }
         } catch (error) {
@@ -636,22 +637,59 @@ export default function AdminPage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImageToCrop(reader.result as string);
+                setCropType("thumbnail");
                 setShowCropper(true);
             };
             reader.readAsDataURL(file);
         }
     };
 
-    const handleCropComplete = (croppedBlob: Blob) => {
-        const croppedFile = new File([croppedBlob], "thumbnail.jpg", { type: "image/jpeg" });
-        setThumbnail(croppedFile);
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        if (cropType === "thumbnail") {
+            const croppedFile = new File([croppedBlob], "thumbnail.jpg", { type: "image/jpeg" });
+            setThumbnail(croppedFile);
 
-        const reader = new FileReader();
-        reader.onloadend = () => setThumbnailPreview(reader.result as string);
-        reader.readAsDataURL(croppedBlob);
+            const reader = new FileReader();
+            reader.onloadend = () => setThumbnailPreview(reader.result as string);
+            reader.readAsDataURL(croppedBlob);
+        } else {
+            setUploadingAvatar(true);
+            try {
+                const croppedFile = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" });
+                const formData = new FormData();
+                formData.append("file", croppedFile);
+                formData.append("type", "avatar");
+
+                const res = await fetch("/api/upload", { method: "POST", body: formData });
+                if (res.ok) {
+                    const data = await res.json();
+                    setAuthorForm(prev => ({ ...prev, avatar: data.url }));
+                } else {
+                    alert("Failed to upload avatar");
+                }
+            } catch (error) {
+                console.error("Avatar upload failed:", error);
+                alert("Error uploading avatar");
+            } finally {
+                setUploadingAvatar(false);
+            }
+        }
 
         setShowCropper(false);
         setImageToCrop("");
+    };
+
+    const handleAuthorAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageToCrop(reader.result as string);
+                setCropType("avatar");
+                setShowCropper(true);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     if (loading) {
@@ -1721,12 +1759,17 @@ export default function AdminPage() {
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Author Photo</label>
                                                 <div className="flex flex-col gap-4">
-                                                    <div className="h-24 w-24 rounded-xl overflow-hidden border border-white/10 bg-white/5 relative mx-auto">
+                                                    <div className="h-24 w-24 rounded-xl overflow-hidden border border-white/10 bg-white/5 relative mx-auto group">
                                                         {authorForm.avatar ? (
                                                             <Image src={authorForm.avatar} alt="Preview" fill className="object-cover" />
                                                         ) : (
                                                             <div className="h-full w-full flex items-center justify-center text-muted-foreground/20">
                                                                 <User className="h-8 w-8" />
+                                                            </div>
+                                                        )}
+                                                        {uploadingAvatar && (
+                                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                                                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
                                                             </div>
                                                         )}
                                                     </div>
@@ -1738,51 +1781,32 @@ export default function AdminPage() {
                                                             placeholder="URL or Upload..."
                                                         />
                                                         <label className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-all">
-                                                            <Upload className="h-4 w-4 text-primary" />
+                                                            {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Upload className="h-4 w-4 text-primary" />}
                                                             <input 
                                                                 type="file" 
                                                                 className="hidden" 
                                                                 accept="image/*" 
-                                                                onChange={async (e) => {
-                                                                    const file = e.target.files?.[0];
-                                                                    if (file) {
-                                                                        const formData = new FormData();
-                                                                        formData.append("file", file);
-                                                                        formData.append("type", "avatar");
-                                                                        const res = await fetch("/api/upload", { method: "POST", body: formData });
-                                                                        if (res.ok) {
-                                                                            const data = await res.json();
-                                                                            setAuthorForm({ ...authorForm, avatar: data.url });
-                                                                        }
-                                                                    }
-                                                                }} 
+                                                                onChange={handleAuthorAvatarChange} 
                                                             />
                                                         </label>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Biography</label>
-                                                <Textarea 
-                                                    value={authorForm.bio}
-                                                    onChange={(e) => setAuthorForm({ ...authorForm, bio: e.target.value })}
-                                                    className="bg-zinc-900 border-white/10 min-h-[100px] text-xs font-medium rounded-xl resize-none"
-                                                    placeholder="Brief introduction of the author..."
-                                                />
                                             </div>
                                         </div>
 
                                         <div className="flex flex-col sm:flex-row gap-3 pt-6">
                                             <Button 
                                                 onClick={handleUpsertAuthor} 
+                                                disabled={uploadingAvatar}
                                                 className="flex-1 h-12 rounded-xl bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
                                             >
+                                                {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                                 {editingAuthorId ? "Update Profile" : "Register Writer"}
                                             </Button>
                                             {editingAuthorId && (
                                                 <Button 
                                                     variant="ghost" 
-                                                    onClick={() => { setEditingAuthorId(null); setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect", bio: "" }); }} 
+                                                    onClick={() => { setEditingAuthorId(null); setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" }); }} 
                                                     className="h-12 px-6 text-[10px] font-black uppercase tracking-widest"
                                                 >
                                                     Cancel
@@ -1822,8 +1846,7 @@ export default function AdminPage() {
                                                         setAuthorForm({
                                                             name: author.name,
                                                             avatar: author.avatar,
-                                                            profession: author.profession || "Intelligence Architect",
-                                                            bio: author.bio || ""
+                                                            profession: author.profession || "Intelligence Architect"
                                                         }); 
                                                     }} 
                                                     className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
@@ -1899,8 +1922,11 @@ export default function AdminPage() {
                 <ImageCropper
                     image={imageToCrop}
                     onCropComplete={handleCropComplete}
-                    onCancel={() => setShowCropper(false)}
-                    aspectRatio={16 / 9}
+                    onCancel={() => {
+                        setShowCropper(false);
+                        setImageToCrop("");
+                    }}
+                    aspectRatio={cropType === "avatar" ? 1 : 16 / 9}
                 />
             )}
         </div>
