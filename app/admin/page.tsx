@@ -85,7 +85,8 @@ export default function AdminPage() {
     const [authorForm, setAuthorForm] = useState({
         name: "",
         avatar: "",
-        profession: "Intelligence Architect"
+        profession: "Intelligence Architect",
+        bio: ""
     });
     const [showSidebar, setShowSidebar] = useState(false);
 
@@ -213,7 +214,7 @@ export default function AdminPage() {
             });
             if (response.ok) {
                 setEditingAuthorId(null);
-                setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" });
+                setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect", bio: "" });
                 fetchAuthors();
             }
         } catch (error) {
@@ -1747,7 +1748,8 @@ export default function AdminPage() {
                                                                     if (file) {
                                                                         const formData = new FormData();
                                                                         formData.append("file", file);
-                                                                        const res = await fetch("/api/blogs/upload-thumbnail", { method: "POST", body: formData });
+                                                                        formData.append("type", "avatar");
+                                                                        const res = await fetch("/api/upload", { method: "POST", body: formData });
                                                                         if (res.ok) {
                                                                             const data = await res.json();
                                                                             setAuthorForm({ ...authorForm, avatar: data.url });
@@ -1758,6 +1760,15 @@ export default function AdminPage() {
                                                         </label>
                                                     </div>
                                                 </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Biography</label>
+                                                <Textarea 
+                                                    value={authorForm.bio}
+                                                    onChange={(e) => setAuthorForm({ ...authorForm, bio: e.target.value })}
+                                                    className="bg-zinc-900 border-white/10 min-h-[100px] text-xs font-medium rounded-xl resize-none"
+                                                    placeholder="Brief introduction of the author..."
+                                                />
                                             </div>
                                         </div>
 
@@ -1771,7 +1782,7 @@ export default function AdminPage() {
                                             {editingAuthorId && (
                                                 <Button 
                                                     variant="ghost" 
-                                                    onClick={() => { setEditingAuthorId(null); setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect" }); }} 
+                                                    onClick={() => { setEditingAuthorId(null); setAuthorForm({ name: "", avatar: "", profession: "Intelligence Architect", bio: "" }); }} 
                                                     className="h-12 px-6 text-[10px] font-black uppercase tracking-widest"
                                                 >
                                                     Cancel
@@ -1811,7 +1822,8 @@ export default function AdminPage() {
                                                         setAuthorForm({
                                                             name: author.name,
                                                             avatar: author.avatar,
-                                                            profession: author.profession || "Intelligence Architect"
+                                                            profession: author.profession || "Intelligence Architect",
+                                                            bio: author.bio || ""
                                                         }); 
                                                     }} 
                                                     className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
