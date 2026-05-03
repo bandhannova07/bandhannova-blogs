@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadThumbnail, uploadWriterAvatar, uploadBrandVideo, uploadProductImage, uploadBlogImage } from "@/lib/bfobs-storage";
+import { uploadAsset } from "@/lib/cloudinary";
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,29 +14,36 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        let url: string;
+        // Convert file to base64 for Cloudinary upload
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const fileBase64 = `data:${file.type};base64,${buffer.toString('base64')}`;
 
+        // Map types to folders
+        let folder = 'bandhannova-blogs';
         switch (type) {
             case "thumbnail":
-                url = await uploadThumbnail(file);
+                folder = 'bandhannova-blogs/thumbnails';
                 break;
             case "avatar":
-                url = await uploadWriterAvatar(file);
+                folder = 'bandhannova-blogs/avatars';
                 break;
             case "brand_video":
-                url = await uploadBrandVideo(file);
+                folder = 'bandhannova-blogs/brands';
                 break;
             case "product_image":
-                url = await uploadProductImage(file);
+                folder = 'bandhannova-blogs/products';
                 break;
             case "blog_image":
-                url = await uploadBlogImage(file);
+                folder = 'bandhannova-blogs/content';
                 break;
             default:
-                url = await uploadThumbnail(file);
+                folder = 'bandhannova-blogs/general';
         }
 
-        return NextResponse.json({ url, success: true });
+        const result = await uploadAsset(fileBase64, folder);
+
+        return NextResponse.json({ url: result.secure_url, success: true });
     } catch (error: any) {
         console.error("Error uploading file:", error);
         return NextResponse.json(
