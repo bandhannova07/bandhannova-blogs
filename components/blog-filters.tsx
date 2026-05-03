@@ -246,7 +246,7 @@ export function BlogFilters({
                                             }}
                                             className={cn(
                                                 "relative flex items-center justify-between px-6 py-4 rounded-2xl transition-all duration-300 group/item",
-                                                isSelected ? "bg-primary text-white" : "text-muted-foreground/60 hover:text-primary dark:hover:text-white"
+                                                isSelected ? "bg-primary text-white" : "text-muted-foreground/60 hover:text-primary"
                                             )}
                                         >
                                             <div className="flex items-center gap-4">
